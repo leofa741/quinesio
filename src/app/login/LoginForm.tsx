@@ -187,6 +187,7 @@ export default function LoginForm() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-slate-950 overflow-hidden p-4">
+      <br />
 
       {/* ✨ Background ambiental */}
       <div className="absolute inset-0">
@@ -213,10 +214,10 @@ export default function LoginForm() {
               <br />
 
               <Image
-                src="/img/logo-oro-removebg-preview.png"
+                src="/img/Logo-removebg-preview.png"
                 alt="Siltulook"
-                width={240}
-                height={160}
+                width={100}
+                height={100}
                 className="relative transition-transform duration-300 group-hover:scale-[1.02]"
               />
             </div>

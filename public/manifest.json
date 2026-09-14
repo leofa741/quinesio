@@ -1,7 +1,7 @@
 {
-  "name": "Jimena Sanchez Propiedades",
-  "short_name": "JS Propiedades",
-  "description": "Encuentra tu hogar ideal. Venta y alquiler de propiedades.",
+  "name": "kinesio",
+  "short_name": "kinesiologia",
+  "description": "Encuentra tu kinesiologo ideal.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",

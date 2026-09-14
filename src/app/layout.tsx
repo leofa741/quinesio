@@ -34,15 +34,15 @@ const montserrat = Montserrat({
   weight: ["400"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.quinesio.com.ar';
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kinesio.com.ar';
 
 
 
 export const metadata: Metadata = {
-  title: "Quinesio",
-  description: "Encontrá lo que buscás en Quinesio",
+  title: "Kinesio",
+  description: "Encontrá lo que buscás en Kinesio",
   manifest: "/manifest.json",
-  keywords: "Quinesiologia",
+  keywords: "Kinesiologia",
   authors: [{ name: "Quinesiologia", url: SITE_URL }],
 
   metadataBase: new URL(SITE_URL),
@@ -52,10 +52,10 @@ export const metadata: Metadata = {
 
 
   openGraph: {
-    title: "Quinesio",
-    description: "Encontrá lo que buscás en Quinesio",
+    title: "Kinesio",
+    description: "Encontrá lo que buscás en Kinesio",
     url: SITE_URL,
-    siteName: "Quinesio",
+    siteName: "Kinesio",
     images: [
       {
         url: "/og-image.jpg",
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "Quinesio",
+    title: "Kinesio",
     description: "Encontrá lo que buscás en Quinesio",
     images: ["/og-image.jpg"],
   },

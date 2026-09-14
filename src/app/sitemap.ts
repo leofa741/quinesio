@@ -12,7 +12,7 @@ const staticPages = [
 // Función para obtener propiedades publicadas dinámicamente
 async function getDynamicPropertyUrls(): Promise<string[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.quinesio.com.ar';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kinesio.com.ar';
     const res = await fetch(`${baseUrl}/api/gestion/public/looks?limit=100&estado=publicado`, {
       next: { revalidate: 3600 } // Cache por 1 hora
     });
@@ -28,7 +28,7 @@ async function getDynamicPropertyUrls(): Promise<string[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.quinesio.com.ar';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kinesio.com.ar';
   
   // Combinar URLs estáticas + dinámicas
   const dynamicUrls = await getDynamicPropertyUrls();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Link from 'next/link';
+
 
 // ─────────────────────────────────────────────────────────────
 // 🔹 Iconos Minimalistas
@@ -38,18 +38,18 @@ const Icons = {
 export default function Contact() {
   // ✅ Estado del formulario
   const [form, setForm] = useState({ name: '', contact: '', interest: 'general', message: '' });
-  // ✅ Nuevo estado para saber qué campos tocó el usuario (para mostrar bordes rojos)
+  // ✅ Estado para saber qué campos tocó el usuario (para mostrar bordes rojos)
   const [touched, setTouched] = useState({ name: false, contact: false, message: false });
   const [status, setStatus] = useState<{ type: 'success' | 'error' | ''; message: string }>({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
 
-  const whatsappNumber = '5491132538837';
-  const whatsappMessage = 'Hola, me interesa consultar por una prenda de SG Tu Look';
+  const whatsappNumber = '5491141461312';
+  const whatsappMessage = 'Hola, me interesa consultar por un turno o servicio kinésico';
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setForm(prev => ({ ...prev, [id]: value }));
-    setTouched(prev => ({ ...prev, [id]: true })); // Marcar como "tocado" al escribir
+    setTouched(prev => ({ ...prev, [id]: true }));
     if (status.type === 'error') setStatus({ type: '', message: '' });
   }, [status.type]);
 
@@ -58,16 +58,11 @@ export default function Contact() {
     setStatus({ type: '', message: '' });
     setLoading(true);
 
-    // Forzar validación visual de todos los campos al intentar enviar
     setTouched({ name: true, contact: true, message: true });
 
-    // Protección contra undefined/null y limpieza de espacios
     const nameVal = (form.name || '').trim();
     const contactVal = (form.contact || '').trim();
     const messageVal = (form.message || '').trim();
-
-    // 🔍 DEBUG: Abrí la consola del navegador (F12) para ver qué está detectando React
-    console.log('🔍 Debug Validación:', { nameVal, contactVal, messageVal });
 
     if (!nameVal || !contactVal || !messageVal) {
       setStatus({ 
@@ -90,7 +85,7 @@ export default function Contact() {
 
       const data = await res.json();
       if (data.success) {
-        setStatus({ type: 'success', message: '¡Mensaje enviado! Te responderemos a la brevedad.' });
+        setStatus({ type: 'success', message: '¡Mensaje enviado! Nos pondremos en contacto a la brevedad.' });
         setForm({ name: '', contact: '', interest: 'general', message: '' });
         setTouched({ name: false, contact: false, message: false });
       } else {
@@ -103,23 +98,24 @@ export default function Contact() {
     }
   }, [form]);
 
-  // Helper para clases dinámicas de los inputs
+  // Helper para clases dinámicas de los inputs (Celeste en foco, rojo en error)
   const getInputClass = (fieldName: 'name' | 'contact' | 'message') => {
     const isInvalid = touched[fieldName] && !(form[fieldName] || '').trim();
     return `w-full bg-transparent border-b py-3 text-zinc-100 placeholder-zinc-600 focus:outline-none transition-colors duration-300 text-base ${
       isInvalid 
         ? 'border-red-500 focus:border-red-500' 
-        : 'border-zinc-800 focus:border-rose-400'
+        : 'border-zinc-800 focus:border-sky-400'
     }`;
   };
 
   return (
-    <div className="relative min-h-screen bg-zinc-950 text-zinc-100 selection:bg-rose-500/30">
+    <div className="relative min-h-screen bg-zinc-950 text-zinc-100 selection:bg-sky-500/30">
       
-      {/* Fondo minimalista */}
+      {/* Fondo minimalista con paleta nacional (Celeste/Azul/Ámbar) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-rose-500/5 rounded-full blur-[120px]" />
-        <div className="absolute top-[40%] -left-[10%] w-[500px] h-[500px] bg-amber-500/5 rounded-full blur-[120px]" />
+        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-sky-500/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[40%] -left-[10%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[10%] right-[20%] w-[400px] h-[400px] bg-amber-500/5 rounded-full blur-[100px]" />
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
@@ -127,11 +123,11 @@ export default function Contact() {
         {/* ───────── HEADER MINIMALISTA ───────── */}
         <div className="max-w-2xl mb-16 sm:mb-24">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-light tracking-tight text-white mb-6">
-            Hablemos de <span className="font-serif italic text-rose-300">tu estilo</span>.
+            Hablemos de <span className="font-serif italic text-sky-300">tu recuperación</span>.
           </h1>
           <p className="text-lg text-zinc-400 font-light leading-relaxed max-w-xl">
-            ¿Tenés dudas sobre un talle, una prenda o querés asesoramiento personalizado? 
-            Estamos aquí para ayudarte a encontrar tu look perfecto.
+            ¿Tenés dudas sobre tu cobertura de obra social, necesitás solicitar un turno o querés asesoramiento sobre tu tratamiento? 
+            Estamos aquí para acompañarte en cada paso.
           </p>
         </div>
 
@@ -144,7 +140,7 @@ export default function Contact() {
                 href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-rose-500/30 transition-all duration-300"
+                className="group flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-sky-500/30 transition-all duration-300"
               >
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   <Icons.WhatsApp />
@@ -165,8 +161,8 @@ export default function Contact() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-200">Email</p>
-                    <a href="mailto:hola@sgtulook.com" className="text-sm text-zinc-400 hover:text-rose-300 transition-colors">
-                      hola@sgtulook.com
+                    <a href="mailto:contacto@kinesio.ar" className="text-sm text-zinc-400 hover:text-sky-300 transition-colors">
+                      contacto@kinesio.ar
                     </a>
                   </div>
                 </div>
@@ -176,8 +172,8 @@ export default function Contact() {
                     <Icons.MapPin />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-zinc-200">Showroom</p>
-                    <p className="text-sm text-zinc-400">Mendoza, Buenos Aires, Argentina</p>
+                    <p className="text-sm font-medium text-zinc-200">Consultorio</p>
+                    <p className="text-sm text-zinc-400">Buenos Aires, Argentina 🇦🇷</p>
                   </div>
                 </div>
 
@@ -186,8 +182,8 @@ export default function Contact() {
                     <Icons.Clock />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-zinc-200">Horarios</p>
-                    <p className="text-sm text-zinc-400">Lunes a Sábados: 9:00 a 20:00 hs</p>
+                    <p className="text-sm font-medium text-zinc-200">Horarios de Atención</p>
+                    <p className="text-sm text-zinc-400">Lunes a Sábados: 8:00 a 20:00 hs</p>
                   </div>
                 </div>
               </div>
@@ -201,13 +197,13 @@ export default function Contact() {
               {/* Fila 1: Nombre y Contacto */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label htmlFor="name" className="text-xs font-medium uppercase tracking-wider text-zinc-500">Nombre *</label>
+                  <label htmlFor="name" className="text-xs font-medium uppercase tracking-wider text-zinc-500">Nombre completo *</label>
                   <input
                     type="text"
                     id="name"
                     value={form.name}
                     onChange={handleChange}
-                    placeholder="Tu nombre completo"
+                    placeholder="Tu nombre y apellido"
                     className={getInputClass('name')}
                     required
                   />
@@ -219,7 +215,7 @@ export default function Contact() {
                     id="contact"
                     value={form.contact}
                     onChange={handleChange}
-                    placeholder="Para responderte"
+                    placeholder="Para coordinar tu turno"
                     className={getInputClass('contact')}
                     required
                   />
@@ -228,18 +224,18 @@ export default function Contact() {
 
               {/* Fila 2: Interés */}
               <div className="space-y-2">
-                <label htmlFor="interest" className="text-xs font-medium uppercase tracking-wider text-zinc-500">¿En qué podemos ayudarte?</label>
+                <label htmlFor="interest" className="text-xs font-medium uppercase tracking-wider text-zinc-500">Motivo de consulta</label>
                 <select
                   id="interest"
                   value={form.interest}
                   onChange={handleChange}
-                  className="w-full bg-transparent border-b border-zinc-800 py-3 text-zinc-100 focus:outline-none focus:border-rose-400 transition-colors duration-300 text-base appearance-none cursor-pointer"
+                  className="w-full bg-transparent border-b border-zinc-800 py-3 text-zinc-100 focus:outline-none focus:border-sky-400 transition-colors duration-300 text-base appearance-none cursor-pointer"
                 >
                   <option value="general" className="bg-zinc-900">Consulta general</option>
-                  <option value="talle" className="bg-zinc-900">Dudas sobre talles y medidas</option>
-                  <option value="stock" className="bg-zinc-900">Consultar stock de una prenda</option>
-                  <option value="asesoramiento" className="bg-zinc-900">Asesoramiento de imagen personalizado</option>
-                  <option value="mayorista" className="bg-zinc-900">Compras mayoristas</option>
+                  <option value="obra-social" className="bg-zinc-900">Consulta por cobertura de Obra Social / Prepaga</option>
+                  <option value="turno" className="bg-zinc-900">Solicitar turno para evaluación kinésica</option>
+                  <option value="domicilio" className="bg-zinc-900">Kinesiología y rehabilitación a domicilio</option>
+                  <option value="convenios" className="bg-zinc-900">Convenios empresariales o clubes deportivos</option>
                 </select>
               </div>
 
@@ -251,7 +247,7 @@ export default function Contact() {
                   rows={4}
                   value={form.message}
                   onChange={handleChange}
-                  placeholder="Contanos qué estás buscando, tu talle habitual o cualquier duda que tengas..."
+                  placeholder="Contanos brevemente tu motivo de consulta, tu obra social o la zona que necesita atención..."
                   className={getInputClass('message')}
                   required
                 />
@@ -265,7 +261,7 @@ export default function Contact() {
                   className={`group relative w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full font-medium text-sm tracking-wide transition-all duration-300 min-h-[52px] ${
                     loading 
                       ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
-                      : 'bg-white text-zinc-950 hover:bg-rose-50 hover:scale-[1.02] active:scale-[0.98]'
+                      : 'bg-white text-zinc-950 hover:bg-sky-50 hover:scale-[1.02] active:scale-[0.98]'
                   }`}
                 >
                   {loading ? (
@@ -299,7 +295,7 @@ export default function Contact() {
               )}
 
               <p className="text-xs text-zinc-600 pt-4">
-                Al enviar, aceptás nuestra política de privacidad. Tus datos están seguros con nosotros.
+                Al enviar, aceptás nuestra política de privacidad. Tus datos están protegidos bajo la Ley de Protección de Datos Personales (Ley 25.326).
               </p>
             </form>
           </div>
