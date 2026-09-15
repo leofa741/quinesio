@@ -129,7 +129,7 @@ export async function DELETE(req: NextRequest) {
     if (!token) return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
-    if (decoded.role !== 'admin') {
+    if (decoded.role !== 'admin' &&  decoded.role !== 'administrativos') {
       return NextResponse.json({ message: 'Acceso denegado' }, { status: 403 });
     }
 

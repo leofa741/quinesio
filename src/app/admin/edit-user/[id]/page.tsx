@@ -11,6 +11,7 @@ export default function EditUserPage() {
   const router = useRouter();
   const params = useParams();
   const userId = params?.id;
+  
 
 
 
@@ -46,7 +47,7 @@ export default function EditUserPage() {
         }
 
         const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        if (decodedToken.role !== 'admin') {
+        if (decodedToken.role !== 'admin' && decodedToken.role !== 'administrativos'){
           router.push('/');
           return;
         }
@@ -342,10 +343,11 @@ export default function EditUserPage() {
               required
               className={inputClasses}
             >
-              <option value="superadmin">Super Administrador</option>
+
               <option value="admin">Administrador</option>
-              <option value="vendedor">Vendedor</option>
-              <option value="user">Usuario</option>
+              <option value="profesionales">Profesionales</option>
+              <option value="administrativos">Administrativos</option>
+              <option value="pacientes">Pacientes</option>
             </select>
           </div>
 

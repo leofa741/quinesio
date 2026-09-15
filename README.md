@@ -39,4 +39,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 
 ### modificar reenvio de email , al logearse hace envio de mensaje y es necesario modificar eso en @/app/lib/auth
+### modificar // app/api/send-mail/route.ts   para el envio de email
 

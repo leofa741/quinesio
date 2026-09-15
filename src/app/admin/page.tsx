@@ -11,6 +11,7 @@ import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faUsers, faUser } from '@fortawesome/free-solid-svg-icons';
 
+
 interface User {
   _id: string;
   name: string;
@@ -20,7 +21,7 @@ interface User {
   zipCode: string;
   email: string;
   phone: string;
-  role: 'admin' | 'superadmin' | 'vendedor' | 'user' | string;
+  role: 'admin' | 'profesionales' | 'administrativos' | 'pacientes' | string;
   img?: string;
   token?: string;
 }
@@ -49,8 +50,8 @@ export default function AdminPage() {
 
       try {
         const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        if (decodedToken.role !== 'admin' && decodedToken.role !== 'superadmin') {
-          toast.error('Acceso restringido a administradores');
+        if (decodedToken.role !== 'admin' && decodedToken.role !== 'administrativos') {
+          toast.error('Acceso restringido a administradores del sistema');
           router.push('/');
           return;
         }

@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import connectDB from "@/app/lib/mongoose";
 import LogModel from "@/app/models/LogLogin";
-import FilterForm from './app/gestion/logins/components/FilterForm';
+import FilterForm from './logins/components/FilterForm';
 
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function LoginsPage({
 
     if (!session) redirect('/login');
 
-    const allowedRoles = ['superadmin', 'admin'];
+    const allowedRoles = ['administrativos', 'admin'];
     if (!allowedRoles.includes(session.user.role)) {
         redirect('/gestion');
     }
