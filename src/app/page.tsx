@@ -3,17 +3,13 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { FaStar, FaArrowRight, FaHeartbeat, FaUserMd, FaWhatsapp, FaSearch, FaHospital, FaShieldAlt } from 'react-icons/fa';
-import { formatARS } from '@/app/lib/formatcurrenci';
-
-import VideoHero from './components/ui/VideoHero';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-
+import VideoHero from './components/ui/VideoHero';
 
 // ─────────────────────────────────────────────────────────────
 // 🔹 Tipos para CENTRO DE KINESIOLOGÍA
 // ─────────────────────────────────────────────────────────────
-
 interface Servicio {
   _id: string;
   nombre: string;
@@ -35,17 +31,15 @@ interface Especialidad {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 🔹 Helpers de formato
+// 🔹 Helpers de formato (Hardcodeado para evitar fallos externos)
 // ─────────────────────────────────────────────────────────────
-
 const formatPrice = (monto: number) => {
-  return formatARS ? formatARS(monto) : `$ ${monto.toLocaleString('es-AR')}`;
+  return `$ ${monto.toLocaleString('es-AR')}`;
 };
 
 // ─────────────────────────────────────────────────────────────
 // 🔹 Componentes de Loading LOCAL
 // ─────────────────────────────────────────────────────────────
-
 function ServicesSectionLoader() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -68,7 +62,6 @@ function ServicesSectionLoader() {
 // ─────────────────────────────────────────────────────────────
 // 🔹 Componente Principal
 // ─────────────────────────────────────────────────────────────
-
 export default function HomePage() {
   return <PageContent />;
 }
@@ -101,37 +94,83 @@ function PageContent() {
     return () => container.removeEventListener('mousemove', move);
   }, []);
 
-  // 📥 Cargar datos de servicios
+  // 📥 Cargar datos HARDCODEADOS (SIN API, SIN FETCH, SIN NEXT-AUTH)
   useEffect(() => {
-    const fetchData = async () => {
-      // 1. Servicios destacados (Ajusta la URL a tu endpoint real de servicios)
-      try {
-        const res = await fetch('/api/gestion/public/servicios?destacado=true&limit=6');
-        if (res.ok) {
-          const data = await res.json();
-          setFeaturedServices(data.servicios || []);
+    console.log("🚀 Cargando datos locales (sin API)");
+    
+    const timer = setTimeout(() => {
+      const mockServicios: Servicio[] = [
+        {
+          _id: '1',
+          nombre: 'Rehabilitación de Columna',
+          descripcion: 'Tratamiento especializado para hernias discales, lumbalgias y cervicalgias con tecnología de vanguardia.',
+          categoria: 'rehabilitacion',
+          precioParticular: 15000,
+          requiereOrdenMedica: true,
+          imagen: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=800',
+          slug: 'rehabilitacion-columna',
+          destacado: true,
+          obrasSocialesAceptadas: ['OSDE', 'PAMI', 'Swiss Medical', 'Galeno']
+        },
+        {
+          _id: '2',
+          nombre: 'Kinesiología Deportiva',
+          descripcion: 'Readaptación al esfuerzo, prevención de lesiones y recuperación post-competencia para atletas.',
+          categoria: 'deportiva',
+          precioParticular: 18000,
+          requiereOrdenMedica: false,
+           imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
+          slug: 'kinesiologia-deportiva',
+          destacado: true,
+          obrasSocialesAceptadas: ['OSDE', 'Medifé', 'Particular']
+        },
+        {
+          _id: '3',
+          nombre: 'Pilates Reformer',
+          descripcion: 'Clases personalizadas para fortalecimiento del core, postura y flexibilidad en grupo reducido.',
+          categoria: 'pilates',
+          precioParticular: 12000,
+          requiereOrdenMedica: false,
+          imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
+          slug: 'pilates-reformer',
+          destacado: false,
+          obrasSocialesAceptadas: ['Particular']
+        },
+        {
+          _id: '4',
+          nombre: 'Masoterapia Descontracturante',
+          descripcion: 'Terapia manual profunda para aliviar tensiones musculares, estrés y contracturas crónicas.',
+          categoria: 'masoterapia',
+          precioParticular: 14000,
+          requiereOrdenMedica: false,
+          imagen: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&q=80&w=800',
+          slug: 'masoterapia-descontracturante',
+          destacado: true,
+          obrasSocialesAceptadas: ['OSPE', 'Sancor Salud', 'Particular']
+        },
+        {
+          _id: '5',
+          nombre: 'Rehabilitación Neurológica',
+          descripcion: 'Tratamiento para pacientes con ACV, Parkinson o lesiones medulares para recuperar la movilidad.',
+          categoria: 'neurologica',
+          precioParticular: 20000,
+          requiereOrdenMedica: true,
+            imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
+          slug: 'rehabilitacion-neurologica',
+          destacado: false,
+          obrasSocialesAceptadas: ['PAMI', 'IOMA', 'OSDE']
         }
-      } catch (err) {
-        console.error('Error loading featured services:', err);
-      } finally {
-        setFeaturedLoading(false);
-      }
+      ];
 
-      // 2. Todos los servicios
-      try {
-        const res = await fetch('/api/gestion/public/servicios?limit=12');
-        if (res.ok) {
-          const data = await res.json();
-          setAllServices(data.servicios || []);
-        }
-      } catch (err) {
-        console.error('Error loading all services:', err);
-      } finally {
-        setServicesLoading(false);
-      }
-    };
+      setFeaturedServices(mockServicios.filter(s => s.destacado));
+      setAllServices(mockServicios);
+      setFeaturedLoading(false);
+      setServicesLoading(false);
+      
+      console.log("✅ Datos locales cargados exitosamente");
+    }, 800); // Simula 800ms de carga para ver el skeleton
 
-    fetchData();
+    return () => clearTimeout(timer);
   }, []);
 
   // 🔍 Búsqueda local en frontend
@@ -149,24 +188,16 @@ function PageContent() {
     { slug: 'deportiva', name: 'Kinesiología Deportiva', description: 'Prevención y readaptación al deporte', icon: '🏃' },
   ];
 
-  // Obras sociales (para mostrar en banner de confianza)
+  // Obras sociales
   const obrasSociales = ['OSDE', 'Swiss Medical', 'PAMI', 'Galeno', 'OSPE', 'Sancor Salud', 'Medifé', 'OSDEPyM'];
 
   // ─────────────────────────────────────────────────────────────
-  // 🔹 Componente reutilizable de beneficio (Salud)
+  // 🔹 Componente reutilizable de beneficio
   // ─────────────────────────────────────────────────────────────
   const BenefitCard = ({
-    icon,
-    title,
-    description,
-    delay,
-    accent = "from-sky-400 to-blue-500"
+    icon, title, description, delay, accent = "from-sky-400 to-blue-500"
   }: {
-    icon: React.ReactNode;
-    title: string;
-    description: string;
-    delay: number;
-    accent?: string;
+    icon: React.ReactNode; title: string; description: string; delay: number; accent?: string;
   }) => (
     <div
       className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 hover:border-sky-500/30 transition-all duration-500 animate-fadeInUp"
@@ -177,12 +208,8 @@ function PageContent() {
       <div className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${accent} bg-opacity-10 flex items-center justify-center mb-5 group-hover:scale-110 transition-all duration-300`}>
         <span className="text-white">{icon}</span>
       </div>
-      <h3 className="relative text-lg font-semibold text-white mb-2 group-hover:text-sky-300 transition-colors duration-300">
-        {title}
-      </h3>
-      <p className="relative text-sm text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors duration-300">
-        {description}
-      </p>
+      <h3 className="relative text-lg font-semibold text-white mb-2 group-hover:text-sky-300 transition-colors duration-300">{title}</h3>
+      <p className="relative text-sm text-slate-400 leading-relaxed group-hover:text-slate-300 transition-colors duration-300">{description}</p>
     </div>
   );
 
@@ -232,15 +259,9 @@ function PageContent() {
   // ✅ Render principal
   return (
     <div ref={containerRef} className="min-h-screen bg-slate-950 text-white">
-  
-      {/* ═══════════════════════════════════════════════════════
-          HERO CON VIDEO
-          ═══════════════════════════════════════════════════════ */}
       <div className="relative w-full left-0 right-0">
         <VideoHero videoSrc="/videos/quinesio.mp4" overlayOpacity={0.5}>
           <div className="max-w-7xl mx-auto px-6 pt-40 sm:pt-48">
-      
-            
             <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-8 items-center">
               <div className="hidden lg:flex justify-center">
                 <div 
@@ -271,10 +292,7 @@ function PageContent() {
                       Buenos Aires, Argentina · Atención de Lunes a Sábados
                     </p>
                   </div>
-                  <a
-                    href="/turnos"
-                    className="inline-flex items-center justify-center px-8 py-4 bg-sky-500 text-slate-950 font-bold uppercase tracking-wide hover:bg-sky-400 transition-all duration-300 rounded-full shadow-lg shadow-sky-500/20"
-                  >
+                  <a href="/turnos" className="inline-flex items-center justify-center px-8 py-4 bg-sky-500 text-slate-950 font-bold uppercase tracking-wide hover:bg-sky-400 transition-all duration-300 rounded-full shadow-lg shadow-sky-500/20">
                     Solicitar Turno
                   </a>
                 </div>
@@ -284,9 +302,7 @@ function PageContent() {
         </VideoHero>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════
-          BANNER OBRAS SOCIALES (Genera confianza inmediata)
-          ═══════════════════════════════════════════════════════ */}
+      {/* BANNER OBRAS SOCIALES */}
       <section className="relative py-6 bg-sky-900/20 border-y border-sky-500/20 overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(56,189,248,0.1),transparent)] animate-pulse" />
         <div className="max-w-7xl mx-auto px-4 flex flex-wrap justify-center items-center gap-6 sm:gap-10 text-slate-300 font-semibold tracking-wide text-sm sm:text-base uppercase">
@@ -297,9 +313,7 @@ function PageContent() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          SECCIÓN BENEFICIOS - CENTRO MÉDICO
-          ═══════════════════════════════════════════════════════ */}
+      {/* SECCIÓN BENEFICIOS */}
       <section className="relative py-20 sm:py-24 lg:py-32 overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-r from-sky-500/10 via-blue-500/15 to-cyan-500/10 opacity-60" style={{ filter: 'blur(120px)' }} />
@@ -332,34 +346,10 @@ function PageContent() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            <BenefitCard
-              icon={<FaHospital className="w-6 h-6" />}
-              title="Todas las Obras Sociales"
-              description="Trabajamos con los principales prestadores del país. Gestionamos tu autorización para que solo te preocupes por sanar."
-              accent="from-sky-400 to-blue-500"
-              delay={0}
-            />
-            <BenefitCard
-              icon={<FaUserMd className="w-6 h-6" />}
-              title="Profesionales Matriculados"
-              description="Licenciados en Kinesiología con matrícula nacional y amplia experiencia en rehabilitación y prevención."
-              accent="from-blue-400 to-cyan-500"
-              delay={100}
-            />
-            <BenefitCard
-              icon={<FaHeartbeat className="w-6 h-6" />}
-              title="Práctica Basada en Evidencia"
-              description="Utilizamos protocolos actualizados y tecnología de última generación para garantizar los mejores resultados."
-              accent="from-emerald-400 to-teal-500"
-              delay={200}
-            />
-            <BenefitCard
-              icon={<FaShieldAlt className="w-6 h-6" />}
-              title="Trato Humano y Personalizado"
-              description="Cada paciente es único. Diseñamos planes de tratamiento a medida, con seguimiento continuo de tu evolución."
-              accent="from-cyan-400 to-sky-500"
-              delay={300}
-            />
+            <BenefitCard icon={<FaHospital className="w-6 h-6" />} title="Todas las Obras Sociales" description="Trabajamos con los principales prestadores del país. Gestionamos tu autorización para que solo te preocupes por sanar." accent="from-sky-400 to-blue-500" delay={0} />
+            <BenefitCard icon={<FaUserMd className="w-6 h-6" />} title="Profesionales Matriculados" description="Licenciados en Kinesiología con matrícula nacional y amplia experiencia en rehabilitación y prevención." accent="from-blue-400 to-cyan-500" delay={100} />
+            <BenefitCard icon={<FaHeartbeat className="w-6 h-6" />} title="Práctica Basada en Evidencia" description="Utilizamos protocolos actualizados y tecnología de última generación para garantizar los mejores resultados." accent="from-emerald-400 to-teal-500" delay={200} />
+            <BenefitCard icon={<FaShieldAlt className="w-6 h-6" />} title="Trato Humano y Personalizado" description="Cada paciente es único. Diseñamos planes de tratamiento a medida, con seguimiento continuo de tu evolución." accent="from-cyan-400 to-sky-500" delay={300} />
           </div>
 
           <div className="text-center mt-14 sm:mt-20 animate-fadeInUp" style={{ animationDelay: '600ms' }}>
@@ -376,9 +366,7 @@ function PageContent() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          SECCIÓN VALOR - CENTRO MÉDICO
-          ═══════════════════════════════════════════════════════ */}
+      {/* SECCIÓN VALOR */}
       <section className="relative -mt-16 sm:-mt-20 py-20 sm:py-24 lg:py-28 overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-96 bg-gradient-to-r from-sky-500/10 via-blue-500/15 to-cyan-500/10 opacity-60" style={{ filter: 'blur(120px)' }} />
@@ -442,7 +430,6 @@ function PageContent() {
               </div>
             </div>
 
-            {/* Card de servicio destacado */}
             <div className="lg:w-1/2 flex justify-center lg:justify-end animate-fadeInUp" style={{ animationDelay: '300ms' }}>
               <div className="relative group w-full max-w-md">
                 <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-sky-500/30 via-blue-500/30 to-cyan-500/30 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
@@ -467,7 +454,7 @@ function PageContent() {
                   <div className="relative overflow-hidden rounded-xl aspect-[4/5]">
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent z-10 pointer-events-none" />
                     <Image
-                      src="/img/kine-rehabilitacion.jpg"
+                      src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=800"
                       alt="Rehabilitación Kinésica Integral"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       width={780}
@@ -517,9 +504,7 @@ function PageContent() {
 
       <br />
 
-      {/* ═══════════════════════════════════════════════════════
-          🏆 SERVICIOS DESTACADOS - DINÁMICA
-          ═══════════════════════════════════════════════════════ */}
+      {/* SERVICIOS DESTACADOS */}
       <section className="py-12 sm:py-16 bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8 sm:mb-10">
@@ -541,9 +526,6 @@ function PageContent() {
             <div className="text-center py-12 text-slate-500">
               <FaHospital className="text-4xl mb-3 mx-auto opacity-50" />
               <p>No hay servicios destacados en este momento</p>
-              <Link href="/servicios" className="text-sky-400 hover:text-sky-300 mt-4 inline-block text-sm">
-                Ver todas las especialidades →
-              </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -555,52 +537,34 @@ function PageContent() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          📂 EXPLORAR POR ESPECIALIDAD
-          ═══════════════════════════════════════════════════════ */}
+      {/* EXPLORAR POR ESPECIALIDAD */}
       <section className="py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">
-              Nuestras Especialidades
-            </h2>
-            <p className="text-slate-400 max-w-2xl mx-auto px-2 text-sm sm:text-base">
-              Encontrá el tratamiento adecuado para tu necesidad con profesionales expertos en cada área
-            </p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4">Nuestras Especialidades</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto px-2 text-sm sm:text-base">Encontrá el tratamiento adecuado para tu necesidad con profesionales expertos en cada área</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {especialidades.map((esp) => (
-              <Link
-                key={esp.slug}
-                href={`/servicios?especialidad=${esp.slug}`}
-                className="group p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-700/50 hover:border-sky-500/40 hover:bg-slate-800/90 transition-all duration-300"
-              >
+              <Link key={esp.slug} href={`/servicios?especialidad=${esp.slug}`} className="group p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-700/50 hover:border-sky-500/40 hover:bg-slate-800/90 transition-all duration-300">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-2xl sm:text-3xl">{esp.icon}</span>
                 </div>
-                <h3 className="text-white font-semibold group-hover:text-sky-400 transition-colors text-sm sm:text-base mb-1">
-                  {esp.name}
-                </h3>
-                <p className="text-slate-500 text-xs group-hover:text-slate-400 transition-colors">
-                  {esp.description}
-                </p>
+                <h3 className="text-white font-semibold group-hover:text-sky-400 transition-colors text-sm sm:text-base mb-1">{esp.name}</h3>
+                <p className="text-slate-500 text-xs group-hover:text-slate-400 transition-colors">{esp.description}</p>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          🛍️ LISTADO GENERAL DE SERVICIOS
-          ═══════════════════════════════════════════════════════ */}
+      {/* LISTADO GENERAL DE SERVICIOS */}
       <section className="py-12 sm:py-16 bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 sm:mb-10">
             <div>
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
-                Todos los Servicios
-              </h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Todos los Servicios</h2>
               <p className="text-slate-400 mt-2 text-sm">
                 {servicesLoading ? 'Cargando...' : `${filteredServices.length} servicio${filteredServices.length !== 1 ? 's' : ''} disponible${filteredServices.length !== 1 ? 's' : ''}`}
               </p>
@@ -618,9 +582,7 @@ function PageContent() {
               <FaSearch className="text-4xl mb-3 mx-auto opacity-50" />
               <p>{searchQuery ? `No se encontraron servicios para "${searchQuery}"` : 'No hay servicios disponibles'}</p>
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="mt-4 text-sky-400 hover:text-sky-300 font-medium text-sm">
-                  Limpiar búsqueda
-                </button>
+                <button onClick={() => setSearchQuery('')} className="mt-4 text-sky-400 hover:text-sky-300 font-medium text-sm">Limpiar búsqueda</button>
               )}
             </div>
           ) : (
@@ -633,56 +595,32 @@ function PageContent() {
 
           <div className="text-center mt-8 sm:mt-10">
             <Link href="/servicios" className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60 hover:border-sky-500/40 hover:text-white transition-all font-medium text-sm">
-              Ver más servicios
-              <FaArrowRight className="w-4 h-4" />
+              Ver más servicios <FaArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          📞 CTA SECTION - OBRAS SOCIALES Y TURNOS
-          ═══════════════════════════════════════════════════════ */}
+      {/* CTA SECTION */}
       <section className="py-16 sm:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6">
-            ¿Tenés dudas sobre tu cobertura o necesitás un turno?
-          </h2>
-          <p className="text-base sm:text-xl text-slate-400 mb-8 sm:mb-10 px-2">
-            Nuestro equipo administrativo te ayuda a gestionar tu autorización y a encontrar el horario que mejor se adapte a vos.
-          </p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6">¿Tenés dudas sobre tu cobertura o necesitás un turno?</h2>
+          <p className="text-base sm:text-xl text-slate-400 mb-8 sm:mb-10 px-2">Nuestro equipo administrativo te ayuda a gestionar tu autorización y a encontrar el horario que mejor se adapte a vos.</p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-            <a
-              href="https://wa.me/5491132538837?text=Hola,%20me%20interesa%20consultar%20por%20un%20servicio%20y%20necesito%20información%20sobre%20mi%20obra%20social"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all shadow-lg shadow-emerald-900/30 text-sm"
-            >
-              <FaWhatsapp className="w-4 h-4 sm:w-5 h-5" />
-              Consultar por WhatsApp
+            <a href="https://wa.me/5491132538837?text=Hola,%20me%20interesa%20consultar%20por%20un%20servicio%20y%20necesito%20información%20sobre%20mi%20obra%20social" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all shadow-lg shadow-emerald-900/30 text-sm">
+              <FaWhatsapp className="w-4 h-4 sm:w-5 h-5" /> Consultar por WhatsApp
             </a>
-            <Link
-              href="/contacto"
-              className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60 hover:border-sky-500/40 hover:text-white transition-all font-semibold text-sm"
-            >
+            <Link href="/contacto" className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-full bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60 hover:border-sky-500/40 hover:text-white transition-all font-semibold text-sm">
               Enviar consulta por mail
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════
-          🎯 MODAL DE SERVICIO (VISTA RÁPIDA)
-          ═══════════════════════════════════════════════════════ */}
+      {/* MODAL DE SERVICIO */}
       {selectedService && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setSelectedService(null)}
-        >
-          <div 
-            className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl shadow-sky-900/50"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedService(null)}>
+          <div className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl shadow-sky-900/50" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 z-10 flex items-center justify-between p-4 bg-slate-900/95 backdrop-blur-xl border-b border-white/10">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1.5">
@@ -701,12 +639,7 @@ function PageContent() {
 
             <div className="grid md:grid-cols-2">
               <div className="relative aspect-square md:aspect-auto">
-                <Image
-                  src={selectedService.imagen || '/img/kine-default.jpg'}
-                  alt={selectedService.nombre}
-                  fill
-                  className="object-cover"
-                />
+                <Image src={selectedService.imagen || '/img/kine-default.jpg'} alt={selectedService.nombre} fill className="object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent md:hidden" />
               </div>
 
@@ -715,15 +648,11 @@ function PageContent() {
                   <span className="text-xs text-sky-400 uppercase tracking-wider font-semibold">{selectedService.categoria.replace('-', ' ')}</span>
                   <h2 className="text-2xl font-bold text-white mt-1 mb-2">{selectedService.nombre}</h2>
                   {selectedService.precioParticular > 0 && (
-                    <p className="text-xl font-bold text-sky-400">
-                      Particular: {formatPrice(selectedService.precioParticular)}
-                    </p>
+                    <p className="text-xl font-bold text-sky-400">Particular: {formatPrice(selectedService.precioParticular)}</p>
                   )}
                 </div>
 
-                <p className="text-sm text-slate-300 leading-relaxed">
-                  {selectedService.descripcion}
-                </p>
+                <p className="text-sm text-slate-300 leading-relaxed">{selectedService.descripcion}</p>
 
                 <div className="space-y-3">
                   <div className="p-3 rounded-lg bg-white/5 border border-white/10">
@@ -741,22 +670,14 @@ function PageContent() {
                     <span className="text-xs text-slate-500 uppercase tracking-wider block mb-1">Obras Sociales Aceptadas</span>
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {selectedService.obrasSocialesAceptadas.map((os, i) => (
-                        <span key={i} className="text-[10px] font-semibold text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
-                          {os}
-                        </span>
+                        <span key={i} className="text-[10px] font-semibold text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">{os}</span>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <a
-                  href={`https://wa.me/5491132538837?text=${encodeURIComponent(`Hola, me interesa el servicio: ${selectedService.nombre}. ¿Podrían indicarme la cobertura con mi obra social?`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold hover:from-emerald-500 hover:to-emerald-400 transition-all duration-300 shadow-lg shadow-emerald-500/30 inline-flex items-center justify-center gap-2"
-                >
-                  <FaWhatsapp className="w-5 h-5" />
-                  Consultar Turno y Cobertura
+                <a href={`https://wa.me/5491132538837?text=${encodeURIComponent(`Hola, me interesa el servicio: ${selectedService.nombre}. ¿Podrían indicarme la cobertura con mi obra social?`)}`} target="_blank" rel="noopener noreferrer" className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold hover:from-emerald-500 hover:to-emerald-400 transition-all duration-300 shadow-lg shadow-emerald-500/30 inline-flex items-center justify-center gap-2">
+                  <FaWhatsapp className="w-5 h-5" /> Consultar Turno y Cobertura
                 </a>
               </div>
             </div>

@@ -92,26 +92,26 @@ export default function Navbar() {
     }
   }, [isDarkMode]);
 
-  // 🔹 Carga de Especialidades / Servicios
+  // 🔹 Carga de Especialidades / Servicios (HARDCODEADO - SIN FETCH)
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        // Ajusta esta URL a tu endpoint real de especialidades o servicios
-        const res = await fetch('/api/gestion/public/categorias');
-        const data = await res.json();
+    console.log("🚀 Cargando categorías del Navbar (modo local)");
+    
+    const timer = setTimeout(() => {
+      const mockCategorias = [
+        { name: 'Rehabilitación', slug: 'rehabilitacion', count: 12 },
+        { name: 'Kinesiología Deportiva', slug: 'deportiva', count: 8 },
+        { name: 'Pilates Reformer', slug: 'pilates', count: 5 },
+        { name: 'Masoterapia', slug: 'masoterapia', count: 6 },
+        { name: 'Neurología', slug: 'neurologica', count: 4 }
+      ];
+      
+      setCategories(mockCategorias);
+      setLoadingCategories(false);
+      console.log("✅ Categorías del Navbar cargadas");
+    }, 500);
 
-        // Acepta especialidades, servicios o categorías según tu backend
-        setCategories(data.especialidades || data.servicios || data.categorias || []);
-      } catch (error) {
-        console.error('Error cargando especialidades:', error);
-        setCategories([]);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchCategories();
+    return () => clearTimeout(timer);
   }, []);
-
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 30);

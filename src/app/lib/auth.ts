@@ -1,4 +1,5 @@
 /* eslint-disable */
+
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import type { NextAuthOptions } from 'next-auth';
@@ -6,24 +7,29 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import connectDB from './mongoose';
 import UserModel from '../models/User';
-import ClienteModel from '../models/Cliente';
-import AlertaModel from '../models/Alerta'; // ✅ Nuevo import para alertas
 import { NextRequest } from 'next/server';
 import LogModel from '../models/LogLogin';
-import nodemailer from "nodemailer";
+import nodemailer from 'nodemailer';
 
-connectDB();
+/**
+ * Roles disponibles en el sistema
+ */
+export type UserRole =
+  | 'admin'
+  | 'profesionales'
+  | 'administrativos'
+  | 'pacientes';
 
 export interface DecodedToken {
   id: string;
   email: string;
-  role: string;
+  role: UserRole;
 }
 
 type ExtendedUser = {
   id: string;
   email: string;
-  role: string;
+  role: UserRole;
   name: string;
   lastName: string;
   phone: string;
@@ -34,133 +40,77 @@ type ExtendedUser = {
   token: string;
 };
 
-// ✅ Función para normalizar teléfono
-function normalizeTelefono(text?: string): string | null {
-  if (!text) return null;
-  const normalized = text
-    .trim()
-    .replace(/\s+/g, '')
-    .replace(/[^0-9+]/g, '');
-  return normalized || null;
+/**
+ * Conexión a MongoDB
+ */
+connectDB();
+
+/**
+ * Verifica que JWT_SECRET exista.
+ */
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error('JWT_SECRET no está configurado en las variables de entorno.');
+  }
+
+  return secret;
 }
 
-// ✅ Función para normalizar razón social
-function normalizeRazonSocial(text: string): string {
-  if (!text) return '';
-  return text
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '');
-}
+/**
+ * Normaliza el rol que viene desde MongoDB.
+ *
+ * IMPORTANTE:
+ * Los usuarios nuevos siempre serán pacientes.
+ *
+ * Si existe algún usuario viejo con role "user",
+ * lo tratamos como paciente para mantener compatibilidad
+ * con datos anteriores.
+ */
+function normalizeRole(role?: string): UserRole {
+  switch (role) {
+    case 'admin':
+      return 'admin';
 
-// ✅ Función para crear cliente automáticamente
-async function crearClienteAutomatico(userData: {
-  name: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  zipCode: string;
-  img?: string;
-}) {
-  try {
-    const clienteExistente = await ClienteModel.findOne({ email: userData.email });
-    if (clienteExistente) {
-      console.log(`✅ Cliente ya existe para ${userData.email}`);
-      return clienteExistente;
-    }
+    case 'profesionales':
+      return 'profesionales';
 
-    const nombre = (userData.name || 'Usuario').trim();
-    const apellido = (userData.lastName || 'Google').trim();
-    const razonSocial = `${nombre} ${apellido} ${userData.email}`.trim();
-    const razonSocialNormalized = normalizeRazonSocial(razonSocial);
+    case 'administrativos':
+      return 'administrativos';
 
-    let telefono: string | null = null;
-    let telefonoNormalized: string | null = null;
+    case 'pacientes':
+      return 'pacientes';
 
-    const phoneTrimmed = userData.phone?.trim();
-    if (phoneTrimmed && phoneTrimmed !== '00000000' && /[\d+]/.test(phoneTrimmed)) {
-      telefono = phoneTrimmed;
-      telefonoNormalized = normalizeTelefono(phoneTrimmed);
-      const yaExiste = await ClienteModel.findOne({ telefonoNormalized });
-      if (yaExiste) {
-        console.log(`⚠️ Teléfono ${telefonoNormalized} ya existe, omitiendo para ${userData.email}`);
-        telefono = null;
-        telefonoNormalized = null;
-      }
-    }
+    // Compatibilidad con usuarios antiguos
+    case 'user':
+      return 'pacientes';
 
-    const clienteData: any = {
-      razonSocial,
-      razonSocialNormalized,
-      nombre,
-      apellido,
-      email: userData.email,
-      direccion: userData.address || '',
-      ciudad: userData.city || '',
-      provincia: '',
-      formaPago: 'efectivo',
-      activo: true,
-      origen: 'registro_automatico'
-    };
-
-    if (telefono && telefonoNormalized) {
-      clienteData.telefono = telefono;
-      clienteData.telefonoNormalized = telefonoNormalized;
-    }
-
-    const nuevoCliente = new ClienteModel(clienteData);
-    const clienteGuardado = await nuevoCliente.save();
-
-    //console.log(`✅ Cliente creado para ${userData.email}${telefono ? ` con teléfono` : ' (sin teléfono)'}`);
-    return clienteGuardado;
-
-  } catch (error: any) {
-    console.error('❌ Error creando cliente automático:', error);
-
-    if (error.code === 11000 || error.statusCode === 409) {
-      try {
-        console.log('🔄 Reintentando creación SIN teléfono...');
-        const nombre = (userData.name || 'Usuario').trim();
-        const apellido = (userData.lastName || 'Google').trim();
-        const razonSocial = `${nombre} ${apellido} ${userData.email}`.trim();
-
-        const fallbackCliente = await ClienteModel.create({
-          razonSocial,
-          razonSocialNormalized: normalizeRazonSocial(razonSocial),
-          nombre,
-          apellido,
-          email: userData.email,
-          telefono: null,
-          telefonoNormalized: null,
-          direccion: userData.address || '',
-          ciudad: userData.city || '',
-          provincia: '',
-          formaPago: 'efectivo',
-          activo: true,
-          origen: 'registro_automatico_fallback'
-        });
-
-        // console.log(`✅ Cliente creado en fallback para ${userData.email}`);
-        return fallbackCliente;
-      } catch (fallbackError) {
-        console.error('❌ Fallback también falló:', fallbackError);
-        throw fallbackError;
-      }
-    }
-    throw error;
+    default:
+      return 'pacientes';
   }
 }
 
-// === Función para enviar email de login ===
-async function sendLoginEmail(to: string) {
+/**
+ * Envía un email avisando que hubo un inicio de sesión.
+ *
+ * Si el mailer no está configurado, no rompe el login.
+ */
+async function sendLoginEmail(to: string): Promise<void> {
   try {
+    if (
+      !process.env.MAILER_EMAIL ||
+      !process.env.MAILER_SECRET_KEY
+    ) {
+      console.warn(
+        '⚠️ MAILER_EMAIL o MAILER_SECRET_KEY no están configurados. Se omite email de login.'
+      );
+
+      return;
+    }
+
     const transporter = nodemailer.createTransport({
-      service: process.env.MAILER_SERVICE,
+      service: process.env.MAILER_SERVICE || 'gmail',
       auth: {
         user: process.env.MAILER_EMAIL,
         pass: process.env.MAILER_SECRET_KEY,
@@ -168,82 +118,175 @@ async function sendLoginEmail(to: string) {
     });
 
     await transporter.sendMail({
-      from: `"Soporte" <${process.env.MAILER_EMAIL}>`,
+      from: `"Centro de Kinesiología" <${process.env.MAILER_EMAIL}>`,
       to,
-      subject: "Nuevo inicio de sesión detectado",
+      subject: 'Nuevo inicio de sesión detectado',
       html: `
-        <h2>Hola!</h2>
-        <p>Se ha detectado un nuevo inicio de sesión en tu cuenta de Quinesio .</p>
-        <p><strong>Email:</strong> ${to}</p>
-        <p><strong>Fecha:</strong> ${new Date().toLocaleString("es-AR")}</p>
-        <br/>
-        <p>Si no fuiste vos, cambia tu contraseña de inmediato.</p>
+        <h2>Nuevo inicio de sesión</h2>
+
+        <p>Se detectó un nuevo inicio de sesión en tu cuenta del Centro de Kinesiología.</p>
+
+        <p>
+          <strong>Email:</strong> ${to}
+        </p>
+
+        <p>
+          <strong>Fecha:</strong>
+          ${new Date().toLocaleString('es-AR')}
+        </p>
+
+        <br />
+
+        <p>
+          Si no fuiste vos, verificá tu cuenta y cambiá tu contraseña.
+        </p>
       `,
     });
   } catch (error) {
-    console.error("❌ Error enviando email de login:", error);
+    /**
+     * Nunca hacemos fallar el login porque el email no pudo enviarse.
+     */
+    console.error('❌ Error enviando email de login:', error);
   }
 }
 
+/**
+ * Genera nuestro JWT interno.
+ *
+ * El JWT debe contener solamente información necesaria
+ * para identificar al usuario y conocer su rol.
+ */
+function generateJwt(user: {
+  id: string;
+  email: string;
+  role: UserRole;
+}): string {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+    getJwtSecret(),
+    {
+      expiresIn: '30d',
+    }
+  );
+}
+
+/**
+ * Configuración de NextAuth
+ */
 export const authOptions: NextAuthOptions = {
   providers: [
+    /**
+     * GOOGLE
+     */
     GoogleProvider({
       clientId: process.env.ID_GOOGLE as string,
       clientSecret: process.env.GOOGLE_SECRET as string,
     }),
+
+    /**
+     * EMAIL + PASSWORD
+     */
     CredentialsProvider({
       name: 'Credentials',
+
       credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
+        email: {
+          label: 'Email',
+          type: 'email',
+        },
+
+        password: {
+          label: 'Contraseña',
+          type: 'password',
+        },
       },
+
       async authorize(credentials): Promise<ExtendedUser | null> {
         await connectDB();
-        const user = await UserModel.findOne({ email: credentials?.email });
-        if (!user) throw new Error('Usuario no encontrado');
-        const isMatch = await bcrypt.compare(credentials!.password, user.password);
-        if (!isMatch) throw new Error('Contraseña incorrecta');
 
-        if (user.role === 'user') {
-          await crearClienteAutomatico({
-            name: user.name,
-            lastName: user.lastName,
-            email: user.email,
-            phone: user.phone,
-            address: user.address,
-            city: user.city,
-            zipCode: user.zipCode,
-            img: user.img
-          });
+        /**
+         * Validación básica
+         */
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Email y contraseña son obligatorios');
         }
 
-        const token = jwt.sign(
-          {
-            id: user.id.toString(),
-            email: user.email,
-            role: user.role,
-            name: user.name,
-            lastName: user.lastName,
-            phone: user.phone,
-            address: user.address,
-            city: user.city,
-            zipCode: user.zipCode
-          },
-          process.env.JWT_SECRET as string,
-          { expiresIn: '30d' }
+        const email = credentials.email.trim().toLowerCase();
+
+        /**
+         * Buscar usuario
+         */
+        const user = await UserModel.findOne({
+          email,
+        });
+
+        if (!user) {
+          throw new Error('Usuario no encontrado');
+        }
+
+        /**
+         * Verificar contraseña
+         */
+        if (!user.password) {
+          throw new Error(
+            'Esta cuenta no tiene una contraseña configurada.'
+          );
+        }
+
+        const passwordCorrecta = await bcrypt.compare(
+          credentials.password,
+          user.password
         );
 
-        return {
-          id: user.id.toString(),
+        if (!passwordCorrecta) {
+          throw new Error('Contraseña incorrecta');
+        }
+
+        /**
+         * Normalizar rol.
+         *
+         * Si el usuario viejo tiene "user",
+         * dentro de la sesión será tratado como paciente.
+         */
+        const role = normalizeRole(user.role);
+
+        /**
+         * Generar JWT
+         */
+        const token = generateJwt({
+          id: user._id.toString(),
           email: user.email,
-          role: user.role,
-          name: user.name,
+          role,
+        });
+
+        /**
+         * Devolver usuario a NextAuth
+         */
+        return {
+          id: user._id.toString(),
+
+          email: user.email,
+
+          role,
+
+          name: user.name || '',
+
           lastName: user.lastName || '',
+
           phone: user.phone || '',
+
           address: user.address || '',
+
           city: user.city || '',
+
           zipCode: user.zipCode || '',
-          image: user.img,
+
+          image: user.img || '',
+
           token,
         };
       },
@@ -251,319 +294,512 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
+    /**
+     * ============================================================
+     * SIGN IN
+     * ============================================================
+     */
     async signIn({ user, account }) {
       await connectDB();
-      let esUsuarioNuevoGoogle = false;
 
+      /**
+       * ----------------------------------------------------------
+       * GOOGLE
+       * ----------------------------------------------------------
+       */
       if (account?.provider === 'google') {
-        let existingUser = await UserModel.findOne({ email: user.email });
+        if (!user.email) {
+          console.error('❌ Google no devolvió email.');
 
+          return false;
+        }
+
+        const email = user.email.trim().toLowerCase();
+
+        /**
+         * Buscar usuario existente.
+         */
+        let existingUser = await UserModel.findOne({
+          email,
+        });
+
+        /**
+         * --------------------------------------------------------
+         * USUARIO NUEVO
+         * --------------------------------------------------------
+         *
+         * Todo usuario público nuevo entra como PACIENTE.
+         *
+         * NO se permite elegir el rol desde el login.
+         */
         if (!existingUser) {
-          esUsuarioNuevoGoogle = true;
-          // 👤 Usuario NUEVO con Google
           existingUser = new UserModel({
             name: user.name || '',
+
             lastName: '',
+
             phone: '',
+
             address: '',
+
             city: '',
+
             zipCode: '',
-            email: user.email,
+
+            email,
+
             img: user.image || '',
-            password: await bcrypt.hash('google-auth', 10),
-            role: 'user',
+
+            /**
+             * Google no necesita una contraseña real.
+             */
+            password: await bcrypt.hash(
+              `google-auth-${email}`,
+              10
+            ),
+
+            /**
+             * IMPORTANTE:
+             * Todo usuario nuevo = paciente.
+             */
+            role: 'pacientes',
+
             google: true,
           });
+
           await existingUser.save();
 
-          // ✅ Crear cliente + alerta de bienvenida (UNA SOLA VEZ)
-          if (existingUser.role === 'user') {
-            const clienteGuardado = await crearClienteAutomatico({
-              name: existingUser.name,
-              lastName: existingUser.lastName,
-              email: existingUser.email,
-              phone: existingUser.phone,
-              address: existingUser.address,
-              city: existingUser.city,
-              zipCode: existingUser.zipCode,
-              img: existingUser.img
-            });
+          console.log(
+            `✅ Nuevo paciente registrado con Google: ${email}`
+          );
+        }
 
-            // 🎁 Bonus: alerta + email de bienvenida
-            if (clienteGuardado?._id) {
-              try {
-                // 1. Crear alerta pre-configurada
-                await AlertaModel.create({
-                  usuario: existingUser._id,
-                  cliente: clienteGuardado._id,
-                  tipo: 'busqueda',
-                  criterios: {
-                    tipoOperacion: 'venta',
-                    ubicacion: {
-                      ciudad: existingUser.city || 'Buenos Aires',
-                      provincia: 'Buenos Aires'
-                    }
-                  },
-                  frecuencia: 'semanal',
-                  activo: true
-                });
+        /**
+         * --------------------------------------------------------
+         * USUARIO EXISTENTE
+         * --------------------------------------------------------
+         *
+         * Nunca modificamos el rol existente.
+         *
+         * Ejemplo:
+         *
+         * MongoDB:
+         * role: "profesionales"
+         *
+         * Login Google:
+         * sigue siendo "profesionales".
+         */
+        const role = normalizeRole(existingUser.role);
 
-                // 2. Enviar email de bienvenida
-                const transporter = nodemailer.createTransport({
-                  service: process.env.MAILER_SERVICE || 'gmail',
-                  auth: {
-                    user: process.env.MAILER_EMAIL,
-                    pass: process.env.MAILER_SECRET_KEY,
-                  },
-                });
+        /**
+         * Si el usuario tenía un role viejo "user",
+         * lo actualizamos a "pacientes".
+         */
+        if (existingUser.role !== role) {
+          existingUser.role = role;
 
-                const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+          await existingUser.save();
+        }
 
-                await transporter.sendMail({
-                  from: `"Jimena Sánchez Propiedades" <${process.env.MAILER_EMAIL}>`,
-                  to: existingUser.email,
-                  subject: '🎁 Bienvenido + Alerta activada',
-                  html: `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, sans-serif; max-width: 650px; margin: 0 auto; background: #0f172a; color: #e2e8f0; }
-    .header { background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0; }
-    .header h1 { color: white; margin: 0 0 8px; font-size: 22px; }
-    .body { padding: 24px; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin: 16px 0; }
-    .badge { display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .cta { display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 600; margin: 16px 0; }
-    .footer { text-align: center; padding: 24px; color: #64748b; font-size: 12px; border-top: 1px solid #334155; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>🏡 ¡Bienvenido a Jimena Sánchez Propiedades!</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 0;">Tu cuenta está lista</p>
-  </div>
-  <div class="body">
-    <p>Hola <strong style="color: white;">${existingUser.name || existingUser.email.split('@')[0]}</strong>,</p>
-    <p>Gracias por registrarte. Para ayudarte a encontrar tu propiedad ideal, <strong>ya activamos una alerta personalizada</strong>:</p>
-    <div class="card">
-      <span class="badge">🔔 Alerta activada</span>
-      <p style="margin: 12px 0 0;"><strong>Nuevas propiedades en venta</strong></p>
-      <p style="color: #94a3b8; margin: 4px 0 0;">📍 ${existingUser.city || 'Buenos Aires'}, Argentina</p>
-      <p style="color: #94a3b8; margin: 4px 0 0;">📅 Frecuencia: Semanal</p>
-    </div>
-    <p>Recibirás un email cada semana con las propiedades que coincidan con tus intereses. Podés gestionar tus alertas en cualquier momento:</p>
-    <div style="text-align: center;">
-      <a href="${baseUrl}/perfil/alertas" class="cta">Gestionar mis alertas →</a>
-    </div>
-    <p style="margin-top: 24px;">¿Necesitás ayuda para empezar? Respondé este email y te contactamos.</p>
-  </div>
-  <div class="footer">
-    <p style="margin: 0 0 8px;"><strong>Jimena Sánchez Propiedades</strong></p>
-    <p style="margin: 0;">© ${new Date().getFullYear()} · Buenos Aires, Argentina</p>
-  </div>
-</body>
-</html>`,
-                  text: `
-Hola ${existingUser.name || existingUser.email.split('@')[0]},
+        /**
+         * Generar JWT interno.
+         */
+        const token = generateJwt({
+          id: existingUser._id.toString(),
+          email: existingUser.email,
+          role,
+        });
 
-¡Bienvenido a Jimena Sánchez Propiedades!
+        /**
+         * Mapear usuario para NextAuth.
+         */
+        const u = user as ExtendedUser;
 
-🔔 Alerta activada:
-• Nuevas propiedades en venta
-• 📍 ${existingUser.city || 'Buenos Aires'}, Argentina
-• 📅 Frecuencia: Semanal
+        u.id = existingUser._id.toString();
 
-Recibirás un email cada semana con propiedades que coincidan con tus intereses.
+        u.email = existingUser.email;
 
-Gestionar alertas: ${baseUrl}/perfil/alertas
+        u.role = role;
 
-¿Necesitás ayuda? Respondé este email.
+        u.token = token;
 
----
-Jimena Sánchez Propiedades · Buenos Aires, Argentina
-                  `.trim()
-                });
+        u.name = existingUser.name || '';
 
-                console.log(`✅ Email de bienvenida + alerta enviado a ${existingUser.email}`);
-              } catch (alertError) {
-                console.error('⚠️ Error creando alerta o enviando email de bienvenida:', alertError);
-                // No romper el flujo: el login sigue funcionando
-              }
-            }
-          }
+        u.lastName = existingUser.lastName || '';
 
-        } else {
-          // 👤 Usuario EXISTENTE con Google (pero quizás sin cliente)
-          if (existingUser.role === 'user') {
-            const clienteGuardado = await crearClienteAutomatico({
-              name: existingUser.name,
-              lastName: existingUser.lastName,
-              email: existingUser.email,
-              phone: existingUser.phone,
-              address: existingUser.address,
-              city: existingUser.city,
-              zipCode: existingUser.zipCode,
-              img: existingUser.img
-            });
+        u.phone = existingUser.phone || '';
 
-            // 🎁 Mismo bonus para usuarios existentes que recién obtienen cliente
-            if (clienteGuardado?._id) {
-              try {
-                // Verificar si ya tiene alertas para no duplicar
-                const yaTieneAlertas = await AlertaModel.findOne({
-                  usuario: existingUser._id,
-                  tipo: 'busqueda',
-                  activo: true
-                });
+        u.address = existingUser.address || '';
 
-                if (!yaTieneAlertas) {
-                  await AlertaModel.create({
-                    usuario: existingUser._id,
-                    cliente: clienteGuardado._id,
-                    tipo: 'busqueda',
-                    criterios: {
-                      tipoOperacion: 'venta',
-                      ubicacion: {
-                        ciudad: existingUser.city || 'Buenos Aires',
-                        provincia: 'Buenos Aires'
-                      }
-                    },
-                    frecuencia: 'semanal',
-                    activo: true
-                  });
-                  console.log(`✅ Alerta creada para usuario existente: ${existingUser.email}`);
-                }
-              } catch (alertError) {
-                console.error('⚠️ Error creando alerta para usuario existente:', alertError);
-              }
-            }
+        u.city = existingUser.city || '';
+
+        u.zipCode = existingUser.zipCode || '';
+
+        u.image = existingUser.img || '';
+      }
+
+      /**
+       * ==========================================================
+       * BITÁCORA
+       * ==========================================================
+       *
+       * Registramos solamente los accesos administrativos /
+       * profesionales.
+       */
+      try {
+        let role: UserRole | null = null;
+
+        if (user?.role) {
+          role = normalizeRole(user.role);
+        } else if (user?.email) {
+          const existingUser = await UserModel.findOne({
+            email: user.email,
+          });
+
+          if (existingUser) {
+            role = normalizeRole(existingUser.role);
           }
         }
 
-        // 🔑 Generar token JWT
-        const token = jwt.sign(
-          {
-            id: existingUser.id.toString(),
-            email: existingUser.email,
-            role: existingUser.role,
-            name: existingUser.name,
-            lastName: existingUser.lastName,
-            phone: existingUser.phone,
-            address: existingUser.address,
-            city: existingUser.city,
-            zipCode: existingUser.zipCode,
-          },
-          process.env.JWT_SECRET as string,
-          { expiresIn: '30d' }
-        );
-
-        // 🔗 Mapear user para NextAuth
-        const u = user as ExtendedUser;
-        u.id = existingUser.id.toString();
-        u.role = existingUser.role;
-        u.token = token;
-        u.lastName = existingUser.lastName || '';
-        u.phone = existingUser.phone || '';
-        u.address = existingUser.address || '';
-        u.city = existingUser.city || '';
-        u.zipCode = existingUser.zipCode || '';
-        u.image = existingUser.img || '';
-        u.name = existingUser.name || '';
-      }
-
-      // ⬅️ REGISTRO EN BITÁCORA (SOLO ADMIN Y SUPERADMIN)
-      try {
-        const role =
-          (user as any).role ||
-          (account?.provider === 'google'
-            ? (await UserModel.findOne({ email: user.email }))?.role
-            : null);
-
-        if (role === 'admin' || role === 'superadmin' || role === 'vendedor') {
+        /**
+         * Registramos accesos de usuarios internos.
+         *
+         * Los pacientes no necesitan generar una entrada
+         * de auditoría cada vez que entran.
+         */
+        if (
+          role === 'admin' ||
+          role === 'profesionales' ||
+          role === 'administrativos'
+        ) {
           await LogModel.create({
             email: user.email,
-            provider: account?.provider || 'credentials',
+
+            provider:
+              account?.provider || 'credentials',
+
             timestamp: new Date(),
           });
         }
       } catch (error) {
-        console.error("Error guardando bitácora:", error);
+        /**
+         * La bitácora jamás debe impedir el login.
+         */
+        console.error(
+          '⚠️ Error guardando bitácora:',
+          error
+        );
       }
 
-      // === ✅ Enviar email de login - LÓGICA CORREGIDA ===
-      // Enviar SIEMPRE, excepto si es un usuario NUEVO de Google (que ya recibe el email de bienvenida)
-      if (!esUsuarioNuevoGoogle) {
-        try {
-          await sendLoginEmail(user.email as string);
-          console.log(`✅ Email de login enviado a ${user.email}`);
-        } catch (emailError) {
-          console.error('❌ Error enviando email de login:', emailError);
-          // No romper el flujo: el login funciona igual
-        }
+      /**
+       * ==========================================================
+       * EMAIL DE LOGIN
+       * ==========================================================
+       */
+      if (user?.email) {
+        await sendLoginEmail(user.email);
       }
 
       return true;
-
-
     },
 
+    /**
+     * ============================================================
+     * JWT NEXTAUTH
+     * ============================================================
+     */
     async jwt({ token, user }) {
+      /**
+       * Primera creación del JWT.
+       */
       if (user) {
         const u = user as ExtendedUser;
+
         token.id = u.id;
+
         token.email = u.email;
-        token.role = u.role;
-        token.name = u.name;
-        token.lastName = u.lastName;
-        token.phone = u.phone;
-        token.address = u.address;
-        token.city = u.city;
-        token.zipCode = u.zipCode;
-        token.image = u.image;
+
+        token.role = normalizeRole(u.role);
+
+        token.name = u.name || '';
+
+        token.lastName = u.lastName || '';
+
+        token.phone = u.phone || '';
+
+        token.address = u.address || '';
+
+        token.city = u.city || '';
+
+        token.zipCode = u.zipCode || '';
+
+        token.picture = u.image || '';
+
+        /**
+         * JWT interno.
+         */
         token.token = u.token;
       }
+
       return token;
     },
 
+    /**
+     * ============================================================
+     * SESSION NEXTAUTH
+     * ============================================================
+     */
     async session({ session, token }) {
-      const t = token as any;
-      session.user.id = t.id;
-      session.user.email = t.email;
-      session.user.role = t.role;
-      session.user.lastName = t.lastName;
-      session.user.phone = t.phone;
-      session.user.address = t.address;
-      session.user.city = t.city;
-      session.user.zipCode = t.zipCode;
-      session.user.name = t.name;
-      session.user.token = t.token || t.accessToken;
+      const t = token as typeof token & {
+        id?: string;
+        role?: string;
+        lastName?: string;
+        phone?: string;
+        address?: string;
+        city?: string;
+        zipCode?: string;
+        token?: string;
+      };
+
+      if (session.user) {
+        session.user.id = t.id || '';
+
+        session.user.email = t.email || '';
+
+        session.user.role = normalizeRole(t.role);
+
+        session.user.name = t.name || '';
+
+        session.user.lastName = t.lastName || '';
+
+        session.user.phone = t.phone || '';
+
+        session.user.address = t.address || '';
+
+        session.user.city = t.city || '';
+
+        session.user.zipCode = t.zipCode || '';
+
+        session.user.token = t.token || '';
+      }
+
       return session;
     },
   },
 
+  /**
+   * Secret utilizado por NextAuth.
+   */
   secret: process.env.JWT_SECRET,
+
+  /**
+   * Sesión basada en JWT.
+   */
+  session: {
+    strategy: 'jwt',
+  },
 };
 
-// Helpers de admin
-export const verifyAdmin = async (req: NextRequest): Promise<DecodedToken | null> => {
+/**
+ * ================================================================
+ * HELPERS DE AUTORIZACIÓN
+ * ================================================================
+ */
+
+/**
+ * Obtiene el Bearer Token del header Authorization.
+ */
+function getBearerToken(
+  req: NextRequest
+): string | null {
+  const authHeader = req.headers.get('authorization');
+
+  if (
+    !authHeader ||
+    !authHeader.startsWith('Bearer ')
+  ) {
+    return null;
+  }
+
+  return authHeader.substring(7).trim() || null;
+}
+
+/**
+ * Verifica un JWT.
+ */
+export const verifyToken = (
+  token: string
+): DecodedToken | null => {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
-    return decoded.role === 'admin' ? decoded : null;
+    const decoded = jwt.verify(
+      token,
+      getJwtSecret()
+    ) as DecodedToken;
+
+    if (
+      !decoded?.id ||
+      !decoded?.email ||
+      !decoded?.role
+    ) {
+      return null;
+    }
+
+    return {
+      id: decoded.id,
+
+      email: decoded.email,
+
+      role: normalizeRole(decoded.role),
+    };
   } catch {
     return null;
   }
 };
 
-export const verifyAdminToken = (token: string): DecodedToken | null => {
+/**
+ * ================================================================
+ * VERIFY ROLE
+ * ================================================================
+ *
+ * Permite proteger una API según uno o varios roles.
+ *
+ * Ejemplo:
+ *
+ * const user = await verifyRole(req, [
+ *   'admin',
+ *   'administrativos'
+ * ]);
+ *
+ */
+export const verifyRole = async (
+  req: NextRequest,
+  allowedRoles: UserRole[]
+): Promise<DecodedToken | null> => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
-    return decoded.role === 'admin' ? decoded : null;
+    const token = getBearerToken(req);
+
+    if (!token) {
+      return null;
+    }
+
+    const decoded = verifyToken(token);
+
+    if (!decoded) {
+      return null;
+    }
+
+    if (!allowedRoles.includes(decoded.role)) {
+      return null;
+    }
+
+    return decoded;
   } catch {
     return null;
   }
+};
+
+/**
+ * ================================================================
+ * VERIFY ADMIN
+ * ================================================================
+ *
+ * Solamente ADMIN.
+ */
+export const verifyAdmin = async (
+  req: NextRequest
+): Promise<DecodedToken | null> => {
+  return verifyRole(req, ['admin']);
+};
+
+/**
+ * ================================================================
+ * VERIFY ADMIN TOKEN
+ * ================================================================
+ *
+ * Verifica directamente un JWT y permite únicamente ADMIN.
+ */
+export const verifyAdminToken = (
+  token: string
+): DecodedToken | null => {
+  try {
+    const decoded = verifyToken(token);
+
+    if (!decoded) {
+      return null;
+    }
+
+    return decoded.role === 'admin'
+      ? decoded
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * ================================================================
+ * VERIFY PROFESIONAL
+ * ================================================================
+ */
+export const verifyProfesional = async (
+  req: NextRequest
+): Promise<DecodedToken | null> => {
+  return verifyRole(req, [
+    'profesionales',
+    'admin',
+  ]);
+};
+
+/**
+ * ================================================================
+ * VERIFY ADMINISTRATIVO
+ * ================================================================
+ */
+export const verifyAdministrativo = async (
+  req: NextRequest
+): Promise<DecodedToken | null> => {
+  return verifyRole(req, [
+    'administrativos',
+    'admin',
+  ]);
+};
+
+/**
+ * ================================================================
+ * VERIFY PERSONAL INTERNO
+ * ================================================================
+ *
+ * Admin + profesionales + administrativos.
+ */
+export const verifyPersonal = async (
+  req: NextRequest
+): Promise<DecodedToken | null> => {
+  return verifyRole(req, [
+    'admin',
+    'profesionales',
+    'administrativos',
+  ]);
+};
+
+/**
+ * ================================================================
+ * VERIFY PACIENTE
+ * ================================================================
+ *
+ * Paciente + admin.
+ *
+ * Esto sirve, por ejemplo, para APIs donde el paciente puede
+ * consultar/modificar sus propios turnos.
+ *
+ * IMPORTANTE:
+ * La API debe además comprobar que el recurso pertenece al
+ * paciente identificado por decoded.id.
+ */
+export const verifyPaciente = async (
+  req: NextRequest
+): Promise<DecodedToken | null> => {
+  return verifyRole(req, [
+    'pacientes',
+    'admin',
+  ]);
 };
