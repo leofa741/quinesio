@@ -350,7 +350,7 @@ export default function Navbar() {
             <div className="order-2 lg:order-4 flex items-center space-x-3">
               {session ? (
                 <div className="hidden lg:flex items-center space-x-4">
-                  <Link href="/perfil" className={`group flex items-center space-x-2.5 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'
+                  <Link href="/profile" className={`group flex items-center space-x-2.5 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'
                     } hover:text-white`}>
                     <div className={`relative w-8 h-8 rounded-full bg-gradient-to-br ${gradients.accent} flex items-center justify-center text-white text-xs font-medium shadow-lg shadow-sky-900/40 group-hover:shadow-sky-900/60 transition-shadow duration-300`}>
                       <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -362,7 +362,7 @@ export default function Navbar() {
                     </div>
                   </Link>
 
-                  {(role === 'admin' || role === 'profesional' || role === 'vendedor') && (
+                  {(role === 'admin' || role === 'profesionales' || role === 'administrativos') && (
                     <Link
                       href="/gestion"
                       className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
@@ -534,7 +534,7 @@ export default function Navbar() {
                       </div>
                     </Link>
 
-                    {(role === 'admin' || role === 'profesional' || role === 'vendedor') && (
+                    {(role === 'admin' || role === 'profesionales' || role === 'administrativos') && (
                       <Link
                         href="/gestion"
                         onClick={closeMenu}

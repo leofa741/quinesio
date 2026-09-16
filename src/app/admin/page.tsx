@@ -33,62 +33,123 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
 
-  useEffect(() => {
-    const validateAndFetch = async () => {
-      if (status === 'loading') return;
-      if (status === 'unauthenticated') {
-        router.push('/');
-        return;
-      }
+// 🔹 useEffect principal (validación mejorada)
+useEffect(() => {
+  const validateAndFetch = async () => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/login?callbackUrl=/admin');
+      return;
+    }
 
-      const token = session?.user?.token || localStorage.getItem('token');
-      if (!token) {
-        toast.error('Acceso denegado');
-        router.push('/');
-        return;
-      }
+    const token = session?.user?.token || localStorage.getItem('token');
+    if (!token) {
+      toast.error('⚠️ Sesión expirada. Por favor, iniciá sesión nuevamente.');
+      router.push('/login');
+      return;
+    }
 
-      try {
-        const decodedToken = JSON.parse(atob(token.split('.')[1]));
-        if (decodedToken.role !== 'admin' && decodedToken.role !== 'administrativos') {
-          toast.error('Acceso restringido a administradores del sistema');
-          router.push('/');
-          return;
-        }
-
-        await fetchUsers(token);
-        setIsAuthorized(true);
-      } catch (err) {
-        console.error('Error al validar sesión:', err);
-        toast.error('Sesión inválida');
-        router.push('/');
-      }
-    };
-
-    validateAndFetch();
-  }, [session, status, router]);
-
-  const fetchUsers = async (token: string) => {
-    setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/users', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const usersData = await response.json();
-        setUsers(usersData);
-      } else {
-        throw new Error('Error al cargar los usuarios');
+      // Decodificar token para verificar rol
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userRole = payload?.role;
+      
+      // ✅ Validar rol con mensaje específico
+      const allowedRoles = ['admin', 'administrativos'];
+      if (!allowedRoles.includes(userRole)) {
+        toast.warning('🔐 No tenés permisos para acceder a esta sección');
+        
+        // Redirigir según el rol del usuario
+        if (userRole === 'pacientes') {
+          router.push('/turnos');
+        } else if (userRole === 'profesionales') {
+          router.push('/gestion');
+        } else {
+          router.push('/');
+        }
+        return;
       }
-    } catch (error) {
-      console.error('Error al cargar los usuarios:', error);
-      toast.error('Hubo un error al cargar los usuarios');
-    } finally {
-      setIsLoading(false);
+
+      // ✅ Si pasa la validación, cargar usuarios
+      await fetchUsers(token);
+      setIsAuthorized(true);
+      
+    } catch (err: any) {
+      console.error('❌ Error validando sesión:', err);
+      
+      // Mensaje específico según el tipo de error
+      if (err.message?.includes('token')) {
+        toast.error('🔑 Sesión inválida. Por favor, volvé a loguearte.');
+      } else {
+        toast.error('⚠️ Ocurrió un error al verificar tus permisos');
+      }
+      router.push('/login');
     }
   };
+
+  validateAndFetch();
+}, [session, status, router]);
+
+
+// 🔹 fetchUsers con manejo amigable de errores 403
+const fetchUsers = async (token: string) => {
+  setIsLoading(true);
+  
+  try {
+    const response = await fetch('/api/admin/users', {
+      method: 'GET',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    // ✅ Manejar específicamente el error 403 (sin permisos)
+    if (response.status === 403) {
+      toast.warning('🔐 No tenés permisos para ver esta sección');
+      router.push('/gestion');
+      return;
+    }
+    
+    // ✅ Manejar error 401 (no autenticado)
+    if (response.status === 401) {
+      toast.error('🔑 Sesión expirada. Por favor, iniciá sesión nuevamente.');
+      router.push('/login');
+      return;
+    }
+    
+    // ✅ Manejar otros errores HTTP
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    // ✅ Éxito: cargar datos
+    const usersData = await response.json();
+    setUsers(usersData);
+    
+  } catch (error: any) {
+    console.error('❌ Error cargando usuarios:', error);
+    
+    // ✅ Mensajes específicos según el tipo de error
+    if (error.message?.includes('403') || error.message?.toLowerCase().includes('permiso')) {
+      toast.warning('🔐 Acceso restringido: no tenés permisos para esta acción');
+    } else if (error.message?.includes('401') || error.message?.toLowerCase().includes('token')) {
+      toast.error('🔑 Tu sesión ha expirado. Por favor, volvé a loguearte.');
+      router.push('/login');
+    } else if (error.message?.includes('404')) {
+      toast.error('📭 No se encontró el recurso solicitado');
+    } else if (error.message?.includes('500')) {
+      toast.error('🔧 Error interno del servidor. Intentá nuevamente más tarde.');
+    } else {
+      toast.error('⚠️ No pudimos cargar la lista de usuarios. Intentá recargar la página.');
+    }
+    
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleDeleteUser = async (userId: string) => {
     const token = session?.user?.token || localStorage.getItem('token');
@@ -151,9 +212,9 @@ export default function AdminPage() {
   }
 
   // 🔹 SEPARAR USUARIOS POR ROL
-  const adminRoles = ['admin', 'superadmin', 'vendedor'];
+  const adminRoles = ['admin', 'profesionales', 'administrativos'];
   const usuariosAdmin = users.filter(u => adminRoles.includes(u.role));
-  const usuariosFinales = users.filter(u => u.role === 'user');
+  const usuariosFinales = users.filter(u => u.role === 'pacientes');
 
   const cardClasses = "border border-slate-700/50 rounded-xl shadow-lg p-4 bg-slate-800/50 backdrop-blur-sm hover:bg-slate-800/70 transition-colors";
   const tableHeaderClasses = "p-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-800/50";

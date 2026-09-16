@@ -1,17 +1,13 @@
 // app/api/auth/register/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import connectDB from '@/app/lib/mongoose';
-import User from '@/app/models/User';
-import Cliente from '@/app/models/Cliente'; // ✅ Importar modelo Cliente
+import UserModel, { IUser } from '@/app/models/User'; // ✅ Importar modelo + interfaz
+import Cliente from '@/app/models/Cliente';
 import bcrypt from 'bcryptjs';
 
 connectDB();
-
-// ✅ Función para crear cliente automáticamente
-// app/api/auth/register/route.ts
-
-// app/api/auth/register/route.ts
 
 // ✅ Funciones de normalización
 function normalizeTelefono(text: string): string {
@@ -30,6 +26,14 @@ function normalizeRazonSocial(text: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
+// ✅ Helper seguro para obtener _id como string
+function getUserId(user: IUser | null): string {
+  if (!user?._id) return '';
+  return typeof user._id === 'string' 
+    ? user._id 
+    : (user._id as mongoose.Types.ObjectId).toString();
+}
+
 async function crearClienteAutomatico(userData: {
   name: string;
   lastName: string;
@@ -46,25 +50,22 @@ async function crearClienteAutomatico(userData: {
       return;
     }
 
-    // ✅ Preparar datos con valores por defecto
     const nombre = userData.name?.trim() || 'Usuario';
     const apellido = userData.lastName?.trim() || '';
     const razonSocial = `${nombre} ${apellido}`.trim() || userData.email;
     const telefono = userData.phone?.trim() || '00000000';
 
-    // ✅ Normalizar campos explícitamente
     const razonSocialNormalized = normalizeRazonSocial(razonSocial);
     const telefonoNormalized = normalizeTelefono(telefono);
 
-    // ✅ Crear cliente PASANDO EXPLÍCITAMENTE todos los campos
     const nuevoCliente = new Cliente({
-      razonSocial: razonSocial,
-      razonSocialNormalized: razonSocialNormalized,
-      nombre: nombre,
-      apellido: apellido,
+      razonSocial,
+      razonSocialNormalized,
+      nombre,
+      apellido,
       email: userData.email,
-      telefono: telefono,
-      telefonoNormalized: telefonoNormalized,
+      telefono,
+      telefonoNormalized,
       direccion: userData.address || '',
       ciudad: userData.city || '',
       provincia: '',
@@ -96,13 +97,13 @@ export async function POST(req: NextRequest) {
 
   try {
     // Validar que el correo no esté registrado
-    const userExists = await User.findOne({ email });
+    const userExists = await UserModel.findOne({ email });
     if (userExists) {
       return NextResponse.json({ message: 'El correo ya está registrado' }, { status: 400 });
     }
 
-    // Crear el usuario con rol 'user' por defecto
-    const newUser = new User({ 
+    // ✅ CORREGIDO: Crear usuario con tipado explícito
+    const newUser = new UserModel({ 
       email, 
       password,
       name,
@@ -111,8 +112,11 @@ export async function POST(req: NextRequest) {
       address,
       city,
       zipCode,
-      role: 'user' // ✅ Rol user por defecto
-    });
+      role: 'pacientes',
+      google: false,
+      activo: true,
+    }) as IUser;
+    
     await newUser.save();
 
     // ✅ Crear cliente automáticamente
@@ -126,10 +130,13 @@ export async function POST(req: NextRequest) {
       zipCode
     });
 
+    // ✅ CORREGIDO: Usar helper para obtener _id como string
+    const userId = getUserId(newUser);
+
     // Generar token JWT
     const token = jwt.sign(
       { 
-        id: newUser._id,
+        id: userId,
         email: newUser.email,
         role: newUser.role,
         name: newUser.name,
@@ -147,7 +154,7 @@ export async function POST(req: NextRequest) {
       message: 'Usuario registrado', 
       token,
       user: {
-        id: newUser._id.toString(),
+        id: userId, // ✅ Usar el id ya convertido
         email: newUser.email,
         role: newUser.role,
         name: newUser.name,
@@ -158,8 +165,9 @@ export async function POST(req: NextRequest) {
         zipCode: newUser.zipCode
       }
     }, { status: 201 });
+    
   } catch (error) {
-    console.error(error);
+    console.error('Error en registro:', error);
     return NextResponse.json({ message: 'Error en el servidor' }, { status: 500 });
   }
 }

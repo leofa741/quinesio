@@ -13,24 +13,116 @@ import {
   FaChartLine,
   FaWallet,
   FaHistory,
-  FaTags
+  FaTags,
+  FaCog,
+  FaFileExcel,
+  FaChartBar,
+  FaHospital,
+  FaMoneyBillWave,
+  FaNotesMedical,
+  FaCalendarAlt,
+  FaUserMd,
+  FaUserInjured
 } from 'react-icons/fa';
+import { UserRole } from '../lib/auth';
+import { isPatientRole, isStaffRole } from '../lib/auth-utils';
 
 // ─────────────────────────────────────────────────────────────
 // 🔹 Módulos disponibles (Fácilmente escalable)
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// 🔹 Módulos del Panel de Administración
+// ─────────────────────────────────────────────────────────────
 const modules = [
-
   {
-    id: 'Usuarios',
-    title: 'Gestión de Usuarioss',
-    description: 'Usuarios del sistema.',
+    id: 'usuarios',
+    title: 'Gestión de Usuarios',
+    description: 'Administrar roles, permisos y acceso del personal del sistema.',
     icon: <FaUsers className="text-2xl text-zinc-400" />,
     href: '/admin',
+    roles: ['admin'], // Solo admin puede gestionar usuarios
   },
-
-
-
+  {
+    id: 'pacientes',
+    title: 'Gestión de Pacientes',
+    description: 'Datos personales, obra social, diagnóstico e historial clínico.',
+    icon: <FaUserInjured className="text-2xl text-zinc-400" />,
+    href: '/gestion/pacientes',
+    roles: ['admin', 'profesionales', 'administrativos'],
+  },
+  {
+    id: 'profesionales',
+    title: 'Profesionales',
+    description: 'Perfiles, especialidades, horarios y disponibilidad de terapeutas.',
+    icon: <FaUserMd className="text-2xl text-zinc-400" />,
+    href: '/admin/profesionales',
+    roles: ['admin'],
+  },
+  {
+    id: 'turnos',
+    title: 'Agenda de Turnos',
+    description: 'Reservar, modificar y gestionar turnos por profesional y fecha.',
+    ticon: <FaCalendarAlt className="text-2xl text-zinc-400" />,
+    href: '/admin/turnos',
+    roles: ['admin', 'profesionales', 'administrativos'],
+  },
+  {
+    id: 'sesiones',
+    title: 'Registro de Sesiones',
+    description: 'Notas clínicas, evolución del paciente y técnicas aplicadas.',
+    icon: <FaNotesMedical className="text-2xl text-zinc-400" />,
+    href: '/admin/sesiones',
+    roles: ['admin', 'profesionales'],
+  },
+  {
+    id: 'pagos',
+    title: 'Gestión de Pagos',
+    description: 'Registrar pagos, métodos y calcular deudas por paciente.',
+    icon: <FaMoneyBillWave className="text-2xl text-zinc-400" />,
+    href: '/admin/pagos',
+    roles: ['admin', 'administrativos'],
+  },
+  {
+    id: 'obras-sociales',
+    title: 'Obras Sociales',
+    description: 'Configurar prestadoras, planes y códigos de cobertura.',
+    icon: <FaHospital className="text-2xl text-zinc-400" />,
+    href: '/admin/obras-sociales',
+    roles: ['admin', 'administrativos'],
+  },
+  {
+    id: 'reportes',
+    title: 'Reportes y Estadísticas',
+    description: 'Turnos por profesional, ingresos, sesiones restantes y más.',
+    icon: <FaChartBar className="text-2xl text-zinc-400" />,
+    href: '/admin/reportes',
+    roles: ['admin', 'administrativos'],
+  },
+  {
+    id: 'importar',
+    title: 'Importar desde Excel',
+    description: 'Cargar masivamente pacientes, turnos o pagos desde planillas.',
+    icon: <FaFileExcel className="text-2xl text-zinc-400" />,
+    href: '/admin/importar',
+    roles: ['admin'],
+  },
+  {
+    id: 'configuracion',
+    title: 'Configuración',
+    description: 'Ajustes generales, notificaciones y parámetros del sistema.',
+    icon: <FaCog className="text-2xl text-zinc-400" />,
+    href: '/admin/configuracion',
+    roles: ['admin'],
+  },
+  
+  {
+    id: 'bitacora',
+    title: 'Bitacota de ingresos al sistema',
+    description: 'Bitacota de ingresos al sistema .',
+    icon: <FaCog className="text-2xl text-zinc-400" />,
+    href: '/gestion/logs',
+    roles: ['admin'],
+  },
 ];
 
 export default function GestionPage() {
@@ -41,17 +133,21 @@ export default function GestionPage() {
   // ✅ Estado para controlar si ya se validó el rol
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
+
   // 🔒 Validación estricta de autenticación y rol
   useEffect(() => {
     const validateAccess = async () => {
+      // Esperar a que NextAuth termine de cargar
       if (status === 'loading') return;
 
+      // 🔹 Si no está autenticado, ir al login
       if (status === 'unauthenticated') {
         router.push('/login');
         setIsAuthorized(false);
         return;
       }
 
+      // 🔹 Obtener token (de sesión o localStorage como fallback)
       const token = session?.user?.token || localStorage.getItem('token');
       if (!token) {
         router.push('/login');
@@ -60,18 +156,26 @@ export default function GestionPage() {
       }
 
       try {
+        // 🔹 Decodificar payload del JWT (sin verificar firma, solo leer datos)
         const payload = JSON.parse(atob(token.split('.')[1]));
-        const allowedRoles = ['admin',];
+        const role = payload?.role as UserRole | undefined;
 
-        if (!allowedRoles.includes(payload.role)) {
-          router.push('/');
+        // 🔹 Validar rol con helpers reutilizables
+        if (!isStaffRole(role)) {
+          // Pacientes van a /turnos, roles desconocidos van a /
+          const redirectPath = isPatientRole(role) ? '/turnos' : '/';
+          console.log(`🔐 Acceso denegado para role "${role}" → redirigiendo a ${redirectPath}`);
+          router.push(redirectPath);
           setIsAuthorized(false);
           return;
         }
 
+        // ✅ Acceso autorizado
+        console.log(`✅ Acceso concedido para role "${role}"`);
         setIsAuthorized(true);
+        
       } catch (err) {
-        console.error('Token inválido', err);
+        console.error('❌ Token inválido o malformado:', err);
         router.push('/login');
         setIsAuthorized(false);
       }
@@ -79,7 +183,7 @@ export default function GestionPage() {
 
     validateAccess();
   }, [status, session, router, pathname]);
-
+  
   // ✅ Loader de seguridad
   if (status === 'loading' || isAuthorized === null) {
     return (
