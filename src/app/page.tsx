@@ -267,7 +267,7 @@ function PageContent() {
                   className="text-white font-black uppercase leading-none tracking-tight text-5xl opacity-90 mr-10 mt-2"
                   style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                 >
-                  KineSalud AR
+                  KineSalud.AR
                 </div>
               </div>
               <div className="text-left">
@@ -285,7 +285,7 @@ function PageContent() {
                   <div>
                     <h2 className="text-3xl md:text-5xl font-black uppercase flex items-center gap-3">
                       Centro de Kinesiología
-                      <span className="text-2xl">🇦🇷</span>
+                   
                     </h2>
                     <p className="mt-2 text-sm md:text-lg uppercase tracking-wider text-gray-300">
                       Buenos Aires, Argentina · Atención de Lunes a Sábados
