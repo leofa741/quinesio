@@ -253,12 +253,14 @@ export default function PacientesPage() {
                             </p>
                         </div>
                     </div>
-                    <button
+
+                 {/*    <button
                         onClick={() => router.push('/gestion/pacientes/nuevo')}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg font-medium transition-colors"
                     >
                         + Nuevo Paciente
-                    </button>
+                    </button>*/}
+
                 </div>
             </div>
 
