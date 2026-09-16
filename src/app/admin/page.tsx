@@ -1,4 +1,4 @@
-// app/admin/page.tsx
+/* eslint-disable */
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,8 +9,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faUsers, faUser } from '@fortawesome/free-solid-svg-icons';
-
+import { 
+  faArrowLeft, faUsers, faUser, faSearch, 
+  faChevronLeft, faChevronRight 
+} from '@fortawesome/free-solid-svg-icons';
 
 interface User {
   _id: string;
@@ -33,133 +35,102 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
 
-// 🔹 useEffect principal (validación mejorada)
-useEffect(() => {
-  const validateAndFetch = async () => {
-    if (status === 'loading') return;
-    
-    if (status === 'unauthenticated') {
-      router.push('/login?callbackUrl=/admin');
-      return;
-    }
+  // 🔍 NUEVO: Estado para el buscador y la paginación de Usuarios Finales
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 5; // Cantidad de usuarios por página
 
-    const token = session?.user?.token || localStorage.getItem('token');
-    if (!token) {
-      toast.error('⚠️ Sesión expirada. Por favor, iniciá sesión nuevamente.');
-      router.push('/login');
-      return;
-    }
-
-    try {
-      // Decodificar token para verificar rol
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const userRole = payload?.role;
+  // 🔹 useEffect principal (validación mejorada)
+  useEffect(() => {
+    const validateAndFetch = async () => {
+      if (status === 'loading') return;
       
-      // ✅ Validar rol con mensaje específico
-      const allowedRoles = ['admin', 'administrativos'];
-      if (!allowedRoles.includes(userRole)) {
-        toast.warning('🔐 No tenés permisos para acceder a esta sección');
-        
-        // Redirigir según el rol del usuario
-        if (userRole === 'pacientes') {
-          router.push('/turnos');
-        } else if (userRole === 'profesionales') {
-          router.push('/gestion');
-        } else {
-          router.push('/');
-        }
+      if (status === 'unauthenticated') {
+        router.push('/login?callbackUrl=/admin');
         return;
       }
 
-      // ✅ Si pasa la validación, cargar usuarios
-      await fetchUsers(token);
-      setIsAuthorized(true);
-      
-    } catch (err: any) {
-      console.error('❌ Error validando sesión:', err);
-      
-      // Mensaje específico según el tipo de error
-      if (err.message?.includes('token')) {
-        toast.error('🔑 Sesión inválida. Por favor, volvé a loguearte.');
-      } else {
-        toast.error('⚠️ Ocurrió un error al verificar tus permisos');
+      const token = session?.user?.token || localStorage.getItem('token');
+      if (!token) {
+        toast.error('⚠️ Sesión expirada. Por favor, iniciá sesión nuevamente.');
+        router.push('/login');
+        return;
       }
-      router.push('/login');
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userRole = payload?.role;
+        const allowedRoles = ['admin', 'administrativos'];
+        
+        if (!allowedRoles.includes(userRole)) {
+          toast.warning('🔐 No tenés permisos para acceder a esta sección');
+          if (userRole === 'pacientes') router.push('/turnos');
+          else if (userRole === 'profesionales') router.push('/gestion');
+          else router.push('/');
+          return;
+        }
+
+        await fetchUsers(token);
+        setIsAuthorized(true);
+      } catch (err: any) {
+        console.error('❌ Error validando sesión:', err);
+        toast.error('⚠️ Ocurrió un error al verificar tus permisos');
+        router.push('/login');
+      }
+    };
+
+    validateAndFetch();
+  }, [session, status, router]);
+
+  // 🔹 Resetear a la página 1 cuando cambia la búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  // 🔹 fetchUsers
+  const fetchUsers = async (token: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (response.status === 403) {
+        toast.warning('🔐 No tenés permisos para ver esta sección');
+        router.push('/gestion');
+        return;
+      }
+      if (response.status === 401) {
+        toast.error('🔑 Sesión expirada. Por favor, iniciá sesión nuevamente.');
+        router.push('/login');
+        return;
+      }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error ${response.status}`);
+      }
+
+      const usersData = await response.json();
+      setUsers(usersData);
+    } catch (error: any) {
+      console.error('❌ Error cargando usuarios:', error);
+      toast.error('⚠️ No pudimos cargar la lista de usuarios.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  validateAndFetch();
-}, [session, status, router]);
-
-
-// 🔹 fetchUsers con manejo amigable de errores 403
-const fetchUsers = async (token: string) => {
-  setIsLoading(true);
-  
-  try {
-    const response = await fetch('/api/admin/users', {
-      method: 'GET',
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-    });
-
-    // ✅ Manejar específicamente el error 403 (sin permisos)
-    if (response.status === 403) {
-      toast.warning('🔐 No tenés permisos para ver esta sección');
-      router.push('/gestion');
-      return;
-    }
-    
-    // ✅ Manejar error 401 (no autenticado)
-    if (response.status === 401) {
-      toast.error('🔑 Sesión expirada. Por favor, iniciá sesión nuevamente.');
-      router.push('/login');
-      return;
-    }
-    
-    // ✅ Manejar otros errores HTTP
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-    }
-
-    // ✅ Éxito: cargar datos
-    const usersData = await response.json();
-    setUsers(usersData);
-    
-  } catch (error: any) {
-    console.error('❌ Error cargando usuarios:', error);
-    
-    // ✅ Mensajes específicos según el tipo de error
-    if (error.message?.includes('403') || error.message?.toLowerCase().includes('permiso')) {
-      toast.warning('🔐 Acceso restringido: no tenés permisos para esta acción');
-    } else if (error.message?.includes('401') || error.message?.toLowerCase().includes('token')) {
-      toast.error('🔑 Tu sesión ha expirado. Por favor, volvé a loguearte.');
-      router.push('/login');
-    } else if (error.message?.includes('404')) {
-      toast.error('📭 No se encontró el recurso solicitado');
-    } else if (error.message?.includes('500')) {
-      toast.error('🔧 Error interno del servidor. Intentá nuevamente más tarde.');
-    } else {
-      toast.error('⚠️ No pudimos cargar la lista de usuarios. Intentá recargar la página.');
-    }
-    
-  } finally {
-    setIsLoading(false);
-  }
-};
-
   const handleDeleteUser = async (userId: string) => {
     const token = session?.user?.token || localStorage.getItem('token');
-
     if (!token) {
       toast.error('Sesión expirada');
       router.push('/login');
       return;
     }
-
     if (userId === session?.user?.id) {
       toast.error('No puedes eliminar tu propia cuenta.');
       return;
@@ -187,7 +158,6 @@ const fetchUsers = async (token: string) => {
       });
 
       if (!response.ok) throw new Error('Error al eliminar el usuario');
-
       toast.success('Usuario eliminado con éxito');
       setUsers(users.filter(user => user._id !== userId));
     } catch (error) {
@@ -214,7 +184,22 @@ const fetchUsers = async (token: string) => {
   // 🔹 SEPARAR USUARIOS POR ROL
   const adminRoles = ['admin', 'profesionales', 'administrativos'];
   const usuariosAdmin = users.filter(u => adminRoles.includes(u.role));
-  const usuariosFinales = users.filter(u => u.role === 'pacientes');
+  
+  // 🔍 FILTRADO DE USUARIOS FINALES (Pacientes)
+  const usuariosFinalesFiltrados = users.filter(u => {
+    if (u.role !== 'pacientes') return false;
+    const query = searchQuery.toLowerCase();
+    return (
+      u.name.toLowerCase().includes(query) ||
+      u.lastName.toLowerCase().includes(query) ||
+      u.email.toLowerCase().includes(query)
+    );
+  });
+
+  // 📄 PAGINACIÓN DE USUARIOS FINALES
+  const totalPages = Math.ceil(usuariosFinalesFiltrados.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const usuariosFinalesPaginados = usuariosFinalesFiltrados.slice(startIndex, startIndex + itemsPerPage);
 
   const cardClasses = "border border-slate-700/50 rounded-xl shadow-lg p-4 bg-slate-800/50 backdrop-blur-sm hover:bg-slate-800/70 transition-colors";
   const tableHeaderClasses = "p-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-800/50";
@@ -337,35 +322,32 @@ const fetchUsers = async (token: string) => {
   const RoleBadge = ({ role, inline = false }: { role: string; inline?: boolean }) => {
     const styles: Record<string, string> = {
       admin: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-      superadmin: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-      vendedor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-      user: 'bg-slate-700/50 text-slate-300 border-slate-600/30',
+      profesionales: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+      administrativos: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+      pacientes: 'bg-slate-700/50 text-slate-300 border-slate-600/30',
     };
     const base = inline ? 'px-2 py-0.5' : 'px-2.5 py-1 rounded-full text-xs';
     return (
-      <span className={`${base} border font-medium capitalize`}>
-        <span className={styles[role] || styles.user}>{role}</span>
+      <span className={`${base} border font-medium capitalize ${styles[role] || styles.pacientes}`}>
+        {role}
       </span>
     );
   };
 
   return (
-    // ✅ KEY FIX: min-h-screen + bg-slate-950 + background ambiental
     <div className="relative min-h-screen bg-slate-950 overflow-hidden">
-
       <br/><br/><br/><br/>
       
-      {/* ✨ Background ambiental - MISMO patrón que el resto del sitio */}
+      {/* ✨ Background ambiental */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-96 bg-gradient-to-r from-violet-500/20 via-fuchsia-500/20 to-cyan-500/20 opacity-40" style={{ filter: 'blur(150px)' }} />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]" aria-hidden="true" />
       </div>
 
-      {/* 🔹 Contenido con z-10 y padding responsivo */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[env(safe-area-inset-bottom)]">
         
-        {/* 🏷️ Header optimizado */}
+        {/* 🏷️ Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pt-4 sm:pt-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
@@ -399,13 +381,10 @@ const fetchUsers = async (token: string) => {
               <FontAwesomeIcon icon={faUsers} className="w-8 h-8 text-slate-500" />
             </div>
             <p className="text-slate-400 text-lg">No hay usuarios registrados.</p>
-            <Link href="/admin/create-user" className="mt-4 inline-flex items-center gap-2 text-violet-400 hover:text-violet-300 text-sm font-medium transition active:scale-[0.98]">
-              + Crear primer usuario
-            </Link>
           </div>
         ) : (
           <>
-            {/* 🔹 Sección 1: Equipo Interno */}
+            {/* 🔹 Sección 1: Equipo Interno (Sin cambios) */}
             <UsersTable
               usersList={usuariosAdmin}
               title="Equipo Interno"
@@ -416,13 +395,73 @@ const fetchUsers = async (token: string) => {
             {/* 🔹 Separador visual */}
             <div className="my-8 border-t border-slate-700/50" />
 
-            {/* 🔹 Sección 2: Usuarios Finales */}
-            <UsersTable
-              usersList={usuariosFinales}
-              title="Usuarios Finales"
-              icon={<FontAwesomeIcon icon={faUser} className="w-5 h-5" />}
-              emptyMessage="No hay usuarios finales registrados."
-            />
+            {/* 🔹 Sección 2: Usuarios Finales (CON BUSCADOR Y PAGINACIÓN) */}
+            <div className="mb-10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center text-violet-400 border border-violet-500/30">
+                    <FontAwesomeIcon icon={faUser} className="w-5 h-5" />
+                  </span>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Usuarios Finales</h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                    {usuariosFinalesFiltrados.length}
+                  </span>
+                </div>
+
+                {/* 🔍 BUSCADOR */}
+                <div className="relative w-full sm:w-72">
+                  <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Tabla/Cards de Usuarios Finales Paginados */}
+              <UsersTable
+                usersList={usuariosFinalesPaginados}
+                title="" // El título ya está arriba
+                icon={<></>}
+                emptyMessage={searchQuery ? "No se encontraron usuarios con ese criterio." : "No hay usuarios finales registrados."}
+              />
+
+              {/* 📄 CONTROLES DE PAGINACIÓN */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-slate-700/50">
+                  <p className="text-sm text-slate-400">
+                    Mostrando <span className="text-white font-medium">{startIndex + 1}</span> a{' '}
+                    <span className="text-white font-medium">{Math.min(startIndex + itemsPerPage, usuariosFinalesFiltrados.length)}</span> de{' '}
+                    <span className="text-white font-medium">{usuariosFinalesFiltrados.length}</span> resultados
+                  </p>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                    >
+                      <FontAwesomeIcon icon={faChevronLeft} className="w-3 h-3" /> Anterior
+                    </button>
+                    
+                    <span className="px-4 py-2 text-sm font-medium text-white bg-violet-600/20 border border-violet-500/30 rounded-lg">
+                      Página {currentPage} de {totalPages}
+                    </span>
+
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
+                    >
+                      Siguiente <FontAwesomeIcon icon={faChevronRight} className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

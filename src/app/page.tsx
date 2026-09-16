@@ -6,7 +6,6 @@ import { FaStar, FaArrowRight, FaHeartbeat, FaUserMd, FaWhatsapp, FaSearch, FaHo
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import VideoHero from './components/ui/VideoHero';
-
 // ─────────────────────────────────────────────────────────────
 // 🔹 Tipos para CENTRO DE KINESIOLOGÍA
 // ─────────────────────────────────────────────────────────────

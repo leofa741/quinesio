@@ -113,8 +113,7 @@ const modules = [
     icon: <FaCog className="text-2xl text-zinc-400" />,
     href: '/admin/configuracion',
     roles: ['admin'],
-  },
-  
+  },  
   {
     id: 'bitacora',
     title: 'Bitacota de ingresos al sistema',

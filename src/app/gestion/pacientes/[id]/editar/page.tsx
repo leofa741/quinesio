@@ -11,6 +11,7 @@ import {
   FaTrash
 } from 'react-icons/fa';
 
+
 interface Paciente {
   _id: string;
   name: string;

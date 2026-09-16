@@ -90,6 +90,9 @@ export async function PUT(request: Request) {
 
     // ✅ Obtener el usuario actualizado
     const updatedUser = await User.findById(userId);
+    if (!updatedUser) {
+      return NextResponse.json({ message: 'Usuario no encontrado' }, { status: 404 });
+    }
 
     return NextResponse.json({ 
       message: 'Perfil actualizado con éxito',
@@ -102,7 +105,7 @@ export async function PUT(request: Request) {
         email: updatedUser.email,
         phone: updatedUser.phone,
         image: updatedUser.img,
-        id: updatedUser._id.toString()
+        id: String(updatedUser._id)
       }
     }, { status: 200 });
 

@@ -20,7 +20,7 @@ interface UserData {
 }
 
 export default function ProfilePage() {
-  const {data: session, status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -75,9 +75,8 @@ export default function ProfilePage() {
         <h1 className="text-3xl sm:text-4xl font-bold tracking-wide">Mi Perfil</h1>
       </header>
 
-        <br/>
-        <br/>
-    
+      <br />
+      <br />
 
       <section className="max-w-2xl mx-auto mt-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
         <div className="flex flex-col items-center space-y-6">
@@ -127,20 +126,33 @@ export default function ProfilePage() {
             </p>
           </div>
 
-          {/* Botones */}
+          {/* Botones de Acción */}
           <div className="flex flex-col sm:flex-row gap-3 w-full mt-6">
+            
+            {/* 1. Editar Perfil */}
             <Link
               href="/profile/edit"
               className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition text-center"
             >
               Editar Perfil
             </Link>
+
+            {/* 2. NUEVO: Mis Alertas / Notificaciones */}
+            <Link
+              href="/profile/notificaciones"
+              className="flex-1 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition text-center flex items-center justify-center gap-2"
+            >
+              <span>🔔</span> Mis Alertas
+            </Link>
+
+            {/* 3. Cerrar Sesión */}
             <button
               onClick={handleLogout}
-              className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition"
+              className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition text-center"
             >
               Cerrar Sesión
             </button>
+
           </div>
         </div>
       </section>
