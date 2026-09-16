@@ -3,12 +3,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import User from '@/app/models/User';
 import connectDB from '@/app/lib/mongoose';
-import fs from 'fs';
-import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+
+// ⚙️ Configuración de Cloudinary (usa las variables de entorno)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 connectDB();
 
-// ✅ GET: Tu código original intacto
+// ✅ GET: Obtener datos del perfil
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -29,7 +35,7 @@ export async function GET() {
   }
 }
 
-// ✅ PUT: Nuevo método para actualizar el perfil
+// ✅ PUT: Actualizar el perfil con subida a Cloudinary
 export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -40,7 +46,7 @@ export async function PUT(req: Request) {
 
     const formData = await req.formData();
     
-    // Campos básicos
+    // 1. Campos básicos de texto
     const updateData: any = {
       name: formData.get('name'),
       lastName: formData.get('lastName'),
@@ -52,7 +58,7 @@ export async function PUT(req: Request) {
       fechaNacimiento: formData.get('fechaNacimiento'),
     };
 
-    // Obra Social (viene como string JSON desde el frontend)
+    // 2. Obra Social (viene como string JSON)
     const obraSocialStr = formData.get('obraSocial');
     if (obraSocialStr) {
       try {
@@ -62,7 +68,7 @@ export async function PUT(req: Request) {
       }
     }
 
-    // Manejo de la imagen de perfil
+    // 3. 🌩️ Manejo de la imagen con Cloudinary (Sin fs ni path)
     const imgFile = formData.get('img') as File | null;
     if (imgFile && imgFile.size > 0) {
       if (!imgFile.type.startsWith('image/')) {
@@ -72,21 +78,25 @@ export async function PUT(req: Request) {
         return NextResponse.json({ message: 'La imagen no puede superar los 5MB' }, { status: 400 });
       }
 
-      const uploadDir = path.join(process.cwd(), 'public', 'img');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      
+      // Convertir el archivo a Base64 para enviarlo a Cloudinary
       const bytes = await imgFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const fileName = `profile-${session.user.id}-${Date.now()}.jpg`;
-      const filePath = path.join(uploadDir, fileName);
-      
-      fs.writeFileSync(filePath, buffer);
-      updateData.img = `/img/${fileName}`;
+      const base64Data = `data:${imgFile.type};base64,${buffer.toString('base64')}`;
+
+      // Subir a Cloudinary
+      const uploadResponse = await cloudinary.uploader.upload(base64Data, {
+        folder: 'kinesiologia/perfiles', // Carpeta organizada en tu nube
+        public_id: `profile_${session.user.id}_${Date.now()}`, // Nombre único
+        transformation: [
+          { width: 400, height: 400, crop: 'fill', quality: 'auto' } // ⚡ Optimización y compresión automática
+        ]
+      });
+
+      // Guardar la URL segura que nos devuelve Cloudinary en la base de datos
+      updateData.img = uploadResponse.secure_url;
     }
 
-    // Actualizar en MongoDB
+    // 4. Actualizar en MongoDB
     const updatedUser = await User.findByIdAndUpdate(
       session.user.id,
       { $set: updateData },

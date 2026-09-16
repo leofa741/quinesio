@@ -4,6 +4,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
+
+// @ts-expect-error react-toastify's stylesheet has no TypeScript declaration.
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function EditUserPage() {
@@ -183,7 +185,7 @@ export default function EditUserPage() {
     );
   }
 
-  if (!session || (session.user.role !== 'admin' && session.user.role !== 'superadmin')) {
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'administrativos')) {
     router.push('/');
     return null;
   }

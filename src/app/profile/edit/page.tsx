@@ -39,7 +39,6 @@ export default function EditarMiPerfilPage() {
       if (status === 'unauthenticated') { router.push('/login?callbackUrl=/profile/edit'); return; }
 
       try {
-        // ✅ Sin headers manuales, NextAuth usa la cookie automáticamente
         const res = await fetch('/api/profile'); 
         if (!res.ok) throw new Error('Error cargando perfil');
         
@@ -53,6 +52,8 @@ export default function EditarMiPerfilPage() {
           obraSocialNombre: user.obraSocial?.nombre || '', obraSocialCodigo: user.obraSocial?.codigo || '',
           obraSocialPlan: user.obraSocial?.plan || '', obraSocialNumeroAfiliado: user.obraSocial?.numeroAfiliado || '',
         });
+        
+        // Si el usuario ya tiene imagen (URL de Cloudinary o local antigua), la mostramos
         if (user.img) setPreviewImg(user.img);
       } catch (err) {
         showNotification('error', '⚠️ Error de carga', 'No se pudieron cargar los datos del perfil');
@@ -72,6 +73,7 @@ export default function EditarMiPerfilPage() {
     if (file) {
       if (!file.type.startsWith('image/')) return showNotification('error', '📷 Formato inválido', 'Solo imágenes (JPG, PNG)');
       if (file.size > 5 * 1024 * 1024) return showNotification('error', '📷 Archivo muy grande', 'Máximo 5MB');
+      
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setPreviewImg(reader.result as string);
@@ -103,10 +105,11 @@ export default function EditarMiPerfilPage() {
       };
       formDataToSend.append('obraSocial', JSON.stringify(obraSocialData));
       
-      // Agregamos la imagen si se seleccionó una nueva
-      if (selectedFile) formDataToSend.append('img', selectedFile);
+      // Agregamos la imagen al FormData SOLO si el usuario seleccionó una nueva
+      if (selectedFile) {
+        formDataToSend.append('img', selectedFile);
+      }
       
-      // ✅ Sin headers manuales, NextAuth usa la cookie automáticamente
       const res = await fetch('/api/profile', {
         method: 'PUT',
         body: formDataToSend,
@@ -208,7 +211,13 @@ export default function EditarMiPerfilPage() {
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-sky-400"><FaUpload /> Foto de Perfil</h2>
           <div className="flex items-center gap-6">
             <div className="relative w-24 h-24 rounded-full bg-slate-800 overflow-hidden border-2 border-slate-700 flex-shrink-0">
-              {previewImg ? <Image src={previewImg} alt="Preview" fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center"><FaUser className="w-8 h-8 text-slate-600" /></div>}
+              {previewImg ? (
+                <Image src={previewImg} alt="Vista previa" fill className="object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <FaUser className="w-8 h-8 text-slate-600" />
+                </div>
+              )}
             </div>
             <div>
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />

@@ -53,16 +53,15 @@ const modules = [
   {
     id: 'profesionales',
     title: 'Profesionales',
-    description: 'Perfiles, especialidades, horarios y disponibilidad de terapeutas.',
-    icon: <FaUserMd className="text-2xl text-zinc-400" />,
+    description: 'Gestiona tu perfil profesional, especialidades, horarios y honorarios.', 
     href: '/admin/profesionales',
-    roles: ['admin'],
+    roles: ['admin', 'profesionales', 'administrativos'], // ✅ Perfecto
   },
   {
     id: 'turnos',
     title: 'Agenda de Turnos',
     description: 'Reservar, modificar y gestionar turnos por profesional y fecha.',
-    ticon: <FaCalendarAlt className="text-2xl text-zinc-400" />,
+    icon: <FaCalendarAlt className="text-2xl text-zinc-400" />,
     href: '/admin/turnos',
     roles: ['admin', 'profesionales', 'administrativos'],
   },
@@ -113,7 +112,7 @@ const modules = [
     icon: <FaCog className="text-2xl text-zinc-400" />,
     href: '/admin/configuracion',
     roles: ['admin'],
-  },  
+  },
   {
     id: 'bitacora',
     title: 'Bitacota de ingresos al sistema',
@@ -172,7 +171,7 @@ export default function GestionPage() {
         // ✅ Acceso autorizado
         console.log(`✅ Acceso concedido para role "${role}"`);
         setIsAuthorized(true);
-        
+
       } catch (err) {
         console.error('❌ Token inválido o malformado:', err);
         router.push('/login');
@@ -182,7 +181,7 @@ export default function GestionPage() {
 
     validateAccess();
   }, [status, session, router, pathname]);
-  
+
   // ✅ Loader de seguridad
   if (status === 'loading' || isAuthorized === null) {
     return (
