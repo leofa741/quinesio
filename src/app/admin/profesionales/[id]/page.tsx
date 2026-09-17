@@ -150,7 +150,7 @@ export default function ProfesionalFormPage() {
               <div><label className={labelClass}>Teléfono</label><input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={inputClass} /></div>
               {!isEdit && (
                 <div className="md:col-span-2">
-                  <label className={labelClass}>Contraseña inicial {!isEdit && <span className="text-slate-500 text-xs">(Por defecto: 123456)</span>}</label>
+                  <label className={labelClass}>Contraseña inicial {!isEdit && <span className="text-slate-500 text-xs">(Por defecto: 123456)<span className="text-red-500 text-xs">(Para logeo con google no es necesaria la contraseña)  </span>   </span>  }</label>
                   <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Dejar vacío para usar 123456" className={inputClass} />
                 </div>
               )}
