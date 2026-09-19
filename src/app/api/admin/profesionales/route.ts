@@ -10,7 +10,7 @@ connectDB();
 // Helper para verificar permisos de gestión
 const canManage = (role: string) => ['admin', 'administrativos'].includes(role);
 
-// ✅ GET: Obtener profesionales
+// ✅ GET: Obtener profesionales (Corregido para que los pacientes puedan ver la lista)
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,22 +19,24 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    // Si es un profesional, solo puede ver su propio perfil
-    if (session.user?.role === 'pacientes' || session.user?.role === 'profesionales') {
+    // 1. Si es un PROFESIONAL, solo puede ver su propio perfil (por seguridad)
+    if (session.user?.role === 'profesionales') {
       if (id && id !== session.user.id) {
-        return NextResponse.json({ message: 'No tienes permiso para ver este perfil' }, { status: 403 });
+        return NextResponse.json({ message: 'No tienes permiso para ver otros perfiles' }, { status: 403 });
       }
       const profesional = await User.findById(session.user.id).select('-password');
       return NextResponse.json({ success: true, profesionales: [profesional] });
     }
 
-    // Admin/Administrativo puede ver todos o uno específico por ID
-    if (id) {
-      const profesional = await User.findById(id).select('-password');
-      return NextResponse.json({ success: true, profesionales: [profesional] });
-    }
+    // 2. ADMIN, ADMINISTRATIVO y PACIENTES pueden ver la lista completa de profesionales ACTIVOS
+    // para poder agendar turnos con ellos.
+    const profesionales = await User.find({ 
+      role: 'profesionales',
+      activo: true // Solo mostramos profesionales que están activos
+    })
+    .select('-password')
+    .sort({ name: 1, lastName: 1 }); // Ordenados alfabéticamente
 
-    const profesionales = await User.find({ role: 'profesionales' }).select('-password').sort({ createdAt: -1 });
     return NextResponse.json({ success: true, profesionales });
   } catch (error) {
     console.error('Error GET /api/admin/profesionales:', error);

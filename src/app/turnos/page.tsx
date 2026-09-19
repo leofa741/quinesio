@@ -13,7 +13,7 @@ export default function TurnosPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login?callbackUrl=/turnos');
-    } else if (status === 'authenticated' && session?.user?.role !== 'pacientes') {
+    } else if (status === 'authenticated' && session?.user?.role !== 'pacientes' && session?.user?.role !== 'admin') {
       // Si un admin intenta entrar aquí por error, lo mandamos a su panel
       router.push('/gestion');
     }

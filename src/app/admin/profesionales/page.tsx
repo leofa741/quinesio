@@ -116,7 +116,7 @@ export default function GestionProfesionalesPage() {
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto mt-35 mb-8">
-        <Link href="/admin" className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 mb-4 transition-colors">
+        <Link href="/gestion" className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 mb-4 transition-colors">
           <FontAwesomeIcon icon={faArrowLeft} /> Volver al Panel
         </Link>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
