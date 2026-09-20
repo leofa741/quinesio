@@ -44,6 +44,7 @@ export interface IUser extends Document {
   especialidades?: string[];
   descripcionProfesional?: string;
   horariosAtencion?: string[];
+  tiempoPreparacionMinutos?: number;
   honorarios?: {
     valorSesion?: number;        // Precio de la sesión estándar
     valorEvaluacion?: number;    // Precio de la primera consulta (opcional)
@@ -112,11 +113,12 @@ const UserSchema = new Schema<IUser, UserModelType, IUserMethods>({
   ordenMedicaUrl: String,   // ✅ Agregado
   fechaNacimiento: Date,
 
-  // 🔹 Campos específicos de profesionales (NUEVO)
+  // 🔹 Campos específicos de profesionales 
   matricula: { type: String, trim: true },
   especialidades: [{ type: String, trim: true }],
   descripcionProfesional: { type: String, trim: true },
   horariosAtencion: [{ type: String, trim: true }],
+  tiempoPreparacionMinutos: { type: Number, default: 0 },
   honorarios: {
     valorSesion: { type: Number, default: 0 },
     valorEvaluacion: { type: Number, default: 0 },

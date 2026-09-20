@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
         extendedProps: {
           estado: turno.estado,
           motivo: turno.motivoConsulta,
+          notasInternas: turno.notasInternas || '',
           pacienteId: turno.paciente._id,
           profesionalId: turno.profesional._id,
         }
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ✅ POST: Crear turno (con validación anti-superposición y emails)
+// ✅ POST: Crear turno (con cálculo automático de tiempo de preparación y anti-superposición)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { pacienteId, profesionalId, fechaInicio, fechaFin, duracionMinutos, motivoConsulta, valorAcordado, moneda } = body;
+    const { pacienteId, profesionalId, fechaInicio, duracionMinutos, motivoConsulta, valorAcordado, moneda } = body;
 
     const [paciente, profesional] = await Promise.all([
       User.findById(pacienteId),
@@ -91,27 +92,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Paciente o profesional no encontrado' }, { status: 404 });
     }
 
-    // 🛡️ Validación crítica: Evitar superposición
+    // 🕒 CÁLCULO AUTOMÁTICO DE FECHA FIN (Sesión + Tiempo de preparación)
+    const start = new Date(fechaInicio);
+    const tiempoPrep = profesional.tiempoPreparacionMinutos || 0;
+    // Sumamos los minutos de la sesión + los minutos de preparación del profesional
+    const end = new Date(start.getTime() + (duracionMinutos + tiempoPrep) * 60000);
+
+    // 🛡️ Validación crítica: Evitar superposición usando la fecha 'end' calculada
     const turnoSuperpuesto = await Turno.findOne({
       profesional: profesionalId,
       estado: { $in: ['pendiente', 'confirmado'] },
       $or: [
-        { fechaInicio: { $lt: new Date(fechaFin), $gte: new Date(fechaInicio) } },
-        { fechaFin: { $gt: new Date(fechaInicio), $lte: new Date(fechaInicio) } },
-        { fechaInicio: { $lte: new Date(fechaInicio) }, fechaFin: { $gte: new Date(fechaFin) } }
+        { fechaInicio: { $lt: end, $gte: start } },
+        { fechaFin: { $gt: start, $lte: end } },
+        { fechaInicio: { $lte: start }, fechaFin: { $gte: end } }
       ]
     });
 
     if (turnoSuperpuesto) {
-      return NextResponse.json({ message: 'El profesional ya tiene un turno en ese horario.' }, { status: 409 });
+      return NextResponse.json({ 
+        message: `El profesional ya tiene un turno en ese horario (recuerda que tiene ${tiempoPrep} min de preparación entre sesiones).` 
+      }, { status: 409 });
     }
 
     const nuevoTurno = await Turno.create({
       paciente: pacienteId,
       profesional: profesionalId,
-      fechaInicio: new Date(fechaInicio),
-      fechaFin: new Date(fechaFin),
-      duracionMinutos,
+      fechaInicio: start,
+      fechaFin: end, // ✅ Guardamos la fecha de fin que incluye el tiempo de preparación
+      duracionMinutos, // Guardamos la duración real de la sesión
+      tiempoPreparacionMinutos: tiempoPrep, // Opcional: útil para reportes futuros
       estado: session.user?.role === 'pacientes' ? 'pendiente' : 'confirmado',
       motivoConsulta,
       valorAcordado: valorAcordado || profesional.honorarios?.valorSesion || 0,
@@ -120,8 +130,8 @@ export async function POST(req: NextRequest) {
     });
 
     // 📧 Disparar emails (Fire and forget)
-    const dateStr = new Date(fechaInicio).toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const timeStr = new Date(fechaInicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = start.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
     sendAppointmentEmails({
       patientEmail: paciente.email,
@@ -142,7 +152,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Error interno al crear el turno' }, { status: 500 });
   }
 }
-// ✅ PATCH: Cambiar estado del turno (Confirmar, Cancelar, Completar)
+
+// ✅ PATCH: Cambiar estado del turno o guardar notas internas
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -152,13 +163,23 @@ export async function PATCH(req: NextRequest) {
     const id = searchParams.get('id');
     const body = await req.json();
 
-    if (!id || !body.estado) {
-      return NextResponse.json({ message: 'ID y estado son requeridos' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ message: 'ID del turno es requerido' }, { status: 400 });
+    }
+
+    // 🛠️ Construir el objeto de actualización dinámicamente
+    const updateData: any = {};
+    if (body.estado) updateData.estado = body.estado;
+    if (body.motivoCancelacion) updateData.motivoCancelacion = body.motivoCancelacion;
+    if (body.notasInternas !== undefined) updateData.notasInternas = body.notasInternas;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ message: 'No hay datos para actualizar' }, { status: 400 });
     }
 
     const turnoActualizado = await Turno.findByIdAndUpdate(
       id,
-      { estado: body.estado, motivoCancelacion: body.motivoCancelacion },
+      { $set: updateData },
       { new: true }
     ).populate('paciente', 'name lastName email').populate('profesional', 'name lastName email');
 
@@ -166,7 +187,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ message: 'Turno no encontrado' }, { status: 404 });
     }
 
-    // 📧 ENVIAR EMAIL si el estado cambia a confirmado o cancelado
+    // 📧 ENVIAR EMAIL solo si el estado cambia a confirmado o cancelado
     if (body.estado === 'confirmado' || body.estado === 'cancelado') {
       const dateStr = new Date(turnoActualizado.fechaInicio).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
       const timeStr = new Date(turnoActualizado.fechaInicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
@@ -175,7 +196,6 @@ export async function PATCH(req: NextRequest) {
       const profName = `${turnoActualizado.profesional.name} ${turnoActualizado.profesional.lastName}`;
       const statusText = body.estado === 'confirmado' ? 'CONFIRMADO' : 'CANCELADO';
 
-      // Reutilizamos tu función maestra de emails
       await sendAppointmentEmails({
         patientEmail: turnoActualizado.paciente.email,
         patientName,
