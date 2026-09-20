@@ -1,7 +1,6 @@
-// app/gestion/pacientes/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -45,7 +44,10 @@ const swalDark = Swal.mixin({
     buttonsStyling: false
 });
 
-export default function PacientesPage() {
+// ==========================================
+// Componente interno que usa useSearchParams
+// ==========================================
+function PacientesContent() {
     const { data: session, status } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -55,7 +57,7 @@ export default function PacientesPage() {
     const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, pages: 1 });
     const [isAuthorized, setIsAuthorized] = useState(false);
 
-    // 🔹 Filtros y búsqueda
+    // 🔹 Filtros y búsqueda (ahora seguros dentro del Suspense)
     const [search, setSearch] = useState(searchParams.get('search') || '');
     const [obraSocial, setObraSocial] = useState(searchParams.get('obraSocial') || '');
     const [ciudad, setCiudad] = useState(searchParams.get('ciudad') || '');
@@ -109,7 +111,6 @@ export default function PacientesPage() {
             if (activo !== null) paramsObj.activo = activo.toString();
 
             const params = new URLSearchParams(paramsObj);
-            console.log('🔍 [FETCH] Query params:', params.toString());
 
             const res = await fetch(`/api/pacientes?${params}`, {
                 headers: {
@@ -117,8 +118,6 @@ export default function PacientesPage() {
                     'Content-Type': 'application/json'
                 }
             });
-
-            console.log('📡 [FETCH] Status:', res.status);
 
             if (res.status === 403) {
                 router.push('/gestion');
@@ -128,12 +127,6 @@ export default function PacientesPage() {
             if (!res.ok) throw new Error(`Error ${res.status}`);
 
             const data = await res.json();
-            console.log('📦 [FETCH] Data:', {
-                total: data.pagination?.total,
-                count: data.pacientes?.length,
-                first: data.pacientes?.[0]
-            });
-
             setPacientes(data.pacientes || []);
             setPagination(data.pagination || { page: 1, limit: 10, total: 0, pages: 1 });
 
@@ -235,7 +228,6 @@ export default function PacientesPage() {
 
     return (
         <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8">
-
             {/* Header */}
             <div className="max-w-6xl mx-auto mt-32 mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -260,18 +252,13 @@ export default function PacientesPage() {
                     >
                         + Nuevo Paciente
                     </button>
-
                 </div>
             </div>
 
             {/* 🔹 Barra de Búsqueda y Filtros */}
             <div className="max-w-6xl mx-auto mb-6">
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-4">
-
-                    {/* Fila 1: Búsqueda + Filtros */}
                     <div className="flex flex-col sm:flex-row gap-4">
-
-                        {/* Búsqueda principal */}
                         <div className="relative flex-1">
                             <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                             <input
@@ -283,7 +270,6 @@ export default function PacientesPage() {
                             />
                         </div>
 
-                        {/* Filtro Obra Social */}
                         <input
                             type="text"
                             placeholder="Obra Social..."
@@ -292,7 +278,6 @@ export default function PacientesPage() {
                             className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 w-full sm:w-48 transition-colors"
                         />
 
-                        {/* Filtro Ciudad */}
                         <input
                             type="text"
                             placeholder="Ciudad..."
@@ -301,7 +286,6 @@ export default function PacientesPage() {
                             className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 w-full sm:w-48 transition-colors"
                         />
 
-                        {/* Toggle Activo */}
                         <label className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
                             <input
                                 type="checkbox"
@@ -318,7 +302,6 @@ export default function PacientesPage() {
                         </label>
                     </div>
 
-                    {/* Fila 2: Botones de acción de filtros */}
                     {(search || obraSocial || ciudad || activo !== null) && (
                         <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
                             <span className="text-xs text-slate-500">Filtros activos:</span>
@@ -341,8 +324,6 @@ export default function PacientesPage() {
             {/* 🔹 Tabla de Pacientes */}
             <div className="max-w-6xl mx-auto">
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
-
-                    {/* Desktop Table */}
                     <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-800/50 text-slate-400 uppercase text-xs">
@@ -372,11 +353,9 @@ export default function PacientesPage() {
                                                 <div>
                                                     <div className="flex items-center gap-2">
                                                         <p className="font-medium text-white">{pac.lastName}, {pac.name}</p>
-                                                        {/* 🔹 LABEL para pacientes desactivados */}
                                                         {pac.activo === false && (
                                                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/30">
-                                                                <FaBan className="w-3 h-3" />
-                                                                Inactivo
+                                                                <FaBan className="w-3 h-3" /> Inactivo
                                                             </span>
                                                         )}
                                                     </div>
@@ -408,7 +387,6 @@ export default function PacientesPage() {
                         </table>
                     </div>
 
-                    {/* Mobile Cards */}
                     <div className="md:hidden divide-y divide-slate-800">
                         {pacientes.map((pac) => (
                             <div 
@@ -425,11 +403,9 @@ export default function PacientesPage() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <p className="font-medium text-white truncate">{pac.lastName}, {pac.name}</p>
-                                        {/* 🔹 LABEL para pacientes desactivados (Mobile) */}
                                         {pac.activo === false && (
                                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-xs font-medium border border-rose-500/30">
-                                                <FaBan className="w-3 h-3" />
-                                                Inactivo
+                                                <FaBan className="w-3 h-3" /> Inactivo
                                             </span>
                                         )}
                                     </div>
@@ -450,7 +426,6 @@ export default function PacientesPage() {
                         ))}
                     </div>
 
-                    {/* Estado vacío */}
                     {pacientes.length === 0 && !loading && (
                         <div className="p-12 text-center text-slate-500">
                             <FaUserInjured className="mx-auto text-4xl mb-3 opacity-50" />
@@ -467,7 +442,6 @@ export default function PacientesPage() {
                     )}
                 </div>
 
-                {/* 🔹 Paginación */}
                 {pagination.pages > 1 && (
                     <div className="flex items-center justify-between mt-4 text-sm text-slate-400">
                         <p>
@@ -493,5 +467,20 @@ export default function PacientesPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+// ==========================================
+// Componente Principal con Suspense Boundary
+// ==========================================
+export default function PacientesPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+            </div>
+        }>
+            <PacientesContent />
+        </Suspense>
     );
 }
