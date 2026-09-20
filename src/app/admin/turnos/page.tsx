@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle, faFileMedical, faTrash, faUserPlus, faSearch, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle, faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faUserMd } from '@fortawesome/free-solid-svg-icons';
 
 interface Profesional {
   _id: string;
