@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 
-// @ts-expect-error react-toastify's stylesheet has no TypeScript declaration.
+
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function EditUserPage() {
