@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle, faFileMedical, faTrash, faUserPlus, faSearch, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle, faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faImage } from '@fortawesome/free-solid-svg-icons';
 
 interface Profesional {
   _id: string;
@@ -25,6 +25,34 @@ interface Paciente {
   email: string;
   phone: string;
 }
+
+// Componente reutilizable para carga de imágenes con preview
+const FileUpload = ({ label, file, preview, onChange, onRemove }: any) => (
+  <div className="space-y-2">
+    <label className="block text-sm text-slate-400 font-medium">{label}</label>
+    {preview ? (
+      <div className="relative group">
+        <img src={preview} alt={label} className="w-full h-32 object-cover rounded-lg border border-slate-700 bg-slate-800" />
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute top-2 right-2 bg-red-500/90 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg"
+          title="Eliminar imagen"
+        >
+          <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+        </button>
+      </div>
+    ) : (
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 hover:border-sky-500/50 transition">
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <FontAwesomeIcon icon={faImage} className="w-8 h-8 text-slate-500 mb-2" />
+          <p className="text-xs text-slate-400">Click para subir imagen</p>
+        </div>
+        <input type="file" className="hidden" accept="image/*" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+      </label>
+    )}
+  </div>
+);
 
 export default function AgendaTurnosPage() {
   const { data: session, status } = useSession();
@@ -44,6 +72,10 @@ export default function AgendaTurnosPage() {
     pacienteId: '', pacienteNombre: '', motivo: '', hora: '09:00', duracion: 60,
   });
 
+  // Estados para archivos del turno
+  const [turnoFiles, setTurnoFiles] = useState({ orden: null, dniFrente: null, dniDorso: null });
+  const [turnoPreviews, setTurnoPreviews] = useState({ orden: '', dniFrente: '', dniDorso: '' });
+
   // Estados para el buscador y creación rápida de pacientes
   const [pacientesList, setPacientesList] = useState<Paciente[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +90,10 @@ export default function AgendaTurnosPage() {
   const [selectedTurno, setSelectedTurno] = useState<any>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  // Estados para archivos en edición
+  const [editFiles, setEditFiles] = useState({ orden: null, dniFrente: null, dniDorso: null });
+  const [editPreviews, setEditPreviews] = useState({ orden: '', dniFrente: '', dniDorso: '' });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -97,32 +133,25 @@ export default function AgendaTurnosPage() {
     setIsModalOpen(true);
     setShowCreatePatient(false);
     setSearchQuery('');
-    setPacientesList([]); // Limpiar lista al abrir
+    setPacientesList([]);
     setIsSearching(false);
+    setTurnoFiles({ orden: null, dniFrente: null, dniDorso: null });
+    setTurnoPreviews({ orden: '', dniFrente: '', dniDorso: '' });
   };
 
-  // ✅ BÚSQUEDA OPTIMIZADA: Solo busca si hay 2+ caracteres
   const fetchPacientesList = async (searchTerm: string) => {
     if (searchTerm.length < 2) {
       setPacientesList([]);
       setIsSearching(false);
       return;
     }
-
     setIsSearching(true);
     try {
       const token = session?.user?.token || localStorage.getItem('token');
       if (!token) return;
-
-      const url = `/api/pacientes?search=${encodeURIComponent(searchTerm)}&limit=15`; 
-
-      const res = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await fetch(`/api/pacientes?search=${encodeURIComponent(searchTerm)}&limit=15`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       }); 
-      
       if (res.ok) {
         const data = await res.json();
         setPacientesList(data.pacientes || []);
@@ -137,20 +166,33 @@ export default function AgendaTurnosPage() {
     }
   };
 
-  // ✅ Manejo del input de búsqueda con Debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => fetchPacientesList(value), 400);
+  };
 
-    // Limpiar timeout anterior
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+  const handleFileChange = (type: 'orden' | 'dniFrente' | 'dniDorso', file: File | null, isEdit = false) => {
+    if (isEdit) {
+      setEditFiles(prev => ({ ...prev, [type]: file }));
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => setEditPreviews(prev => ({ ...prev, [type]: reader.result as string }));
+        reader.readAsDataURL(file);
+      } else {
+        setEditPreviews(prev => ({ ...prev, [type]: '' }));
+      }
+    } else {
+      setTurnoFiles(prev => ({ ...prev, [type]: file }));
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => setTurnoPreviews(prev => ({ ...prev, [type]: reader.result as string }));
+        reader.readAsDataURL(file);
+      } else {
+        setTurnoPreviews(prev => ({ ...prev, [type]: '' }));
+      }
     }
-
-    // Nuevo timeout de 400ms
-    searchTimeoutRef.current = setTimeout(() => {
-      fetchPacientesList(value);
-    }, 400);
   };
 
   const handleCreatePatient = async (e: React.FormEvent) => {
@@ -158,31 +200,15 @@ export default function AgendaTurnosPage() {
     setIsCreatingPatient(true);
     try {
       const token = session?.user?.token || localStorage.getItem('token');
-
       const res = await fetch('/api/pacientes', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: newPatient.name,
-          lastName: newPatient.lastName,
-          email: newPatient.email,
-          phone: newPatient.phone,
-          role: 'pacientes',
-          activo: true
-        }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ...newPatient, role: 'pacientes', activo: true }),
       });
-      
       const data = await res.json();
       if (res.ok) {
         toast.success('✅ Paciente creado exitosamente');
-        setFormData({
-          ...formData,
-          pacienteId: data._id,
-          pacienteNombre: `${data.name} ${data.lastName}`
-        });
+        setFormData({ ...formData, pacienteId: data._id, pacienteNombre: `${data.name} ${data.lastName}` });
         setShowCreatePatient(false);
         setNewPatient({ name: '', lastName: '', email: '', phone: '' });
         setSearchQuery('');
@@ -210,10 +236,20 @@ export default function AgendaTurnosPage() {
       estado: info.event.extendedProps.estado,
       motivo: info.event.extendedProps.motivo,
       notasInternas: info.event.extendedProps.notasInternas || '',
+      ordenMedicaUrl: info.event.extendedProps.ordenMedicaUrl || '',
+      dniFrenteUrl: info.event.extendedProps.dniFrenteUrl || '',
+      dniDorsoUrl: info.event.extendedProps.dniDorsoUrl || '',
       start: info.event.start,
       end: info.event.end,
     };
     setSelectedTurno(turno);
+    setEditPreviews({
+      orden: turno.ordenMedicaUrl,
+      dniFrente: turno.dniFrenteUrl,
+      dniDorso: turno.dniDorsoUrl
+    });
+    setEditFiles({ orden: null, dniFrente: null, dniDorso: null });
+    
     if (turno.estado === 'pendiente') {
       setActionModalOpen(true);
     } else {
@@ -221,22 +257,76 @@ export default function AgendaTurnosPage() {
     }
   };
 
-  const handleSaveNotes = async () => {
+  const handleSubmitTurno = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDate || !formData.pacienteId || !formData.pacienteNombre) {
+      toast.error('Selecciona o crea un paciente primero');
+      return;
+    }
+
+    const [hours, minutes] = formData.hora.split(':');
+    const fechaInicio = new Date(selectedDate);
+    fechaInicio.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const fechaFin = new Date(fechaInicio);
+    fechaFin.setMinutes(fechaFin.getMinutes() + formData.duracion);
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('pacienteId', formData.pacienteId);
+    formDataToSend.append('profesionalId', selectedProf);
+    formDataToSend.append('fechaInicio', fechaInicio.toISOString());
+    formDataToSend.append('fechaFin', fechaFin.toISOString());
+    formDataToSend.append('duracionMinutos', formData.duracion.toString());
+    formDataToSend.append('motivoConsulta', formData.motivo);
+
+    if (turnoFiles.orden) formDataToSend.append('ordenMedica', turnoFiles.orden);
+    if (turnoFiles.dniFrente) formDataToSend.append('dniFrente', turnoFiles.dniFrente);
+    if (turnoFiles.dniDorso) formDataToSend.append('dniDorso', turnoFiles.dniDorso);
+
+    try {
+      const res = await fetch('/api/turnos', { method: 'POST', body: formDataToSend });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('✅ Turno creado y notificaciones enviadas');
+        setIsModalOpen(false);
+        setFormData({ pacienteId: '', pacienteNombre: '', motivo: '', hora: '09:00', duracion: 60 });
+        setTurnoFiles({ orden: null, dniFrente: null, dniDorso: null });
+        setTurnoPreviews({ orden: '', dniFrente: '', dniDorso: '' });
+        const calendarApi = calendarRef.current?.getApi();
+        if (calendarApi) fetchEvents(calendarApi.view.currentStart.toISOString(), calendarApi.view.currentEnd.toISOString());
+      } else {
+        toast.error(data.message || 'Error al crear el turno');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    }
+  };
+
+  const handleUpdateTurno = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedTurno) return;
     setIsSavingNotes(true);
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('notasInternas', selectedTurno.notasInternas);
+    
+    if (editFiles.orden) formDataToSend.append('ordenMedica', editFiles.orden);
+    if (editFiles.dniFrente) formDataToSend.append('dniFrente', editFiles.dniFrente);
+    if (editFiles.dniDorso) formDataToSend.append('dniDorso', editFiles.dniDorso);
+
+    // Marcar para borrar si se removió la preview y no hay nuevo archivo
+    if (!editPreviews.orden && !editFiles.orden && selectedTurno.ordenMedicaUrl) formDataToSend.append('deleteOrden', 'true');
+    if (!editPreviews.dniFrente && !editFiles.dniFrente && selectedTurno.dniFrenteUrl) formDataToSend.append('deleteDniFrente', 'true');
+    if (!editPreviews.dniDorso && !editFiles.dniDorso && selectedTurno.dniDorsoUrl) formDataToSend.append('deleteDniDorso', 'true');
+
     try {
-      const res = await fetch(`/api/turnos?id=${selectedTurno.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notasInternas: selectedTurno.notasInternas })
-      });
+      const res = await fetch(`/api/turnos?id=${selectedTurno.id}`, { method: 'PATCH', body: formDataToSend });
       if (res.ok) {
-        toast.success('📝 Notas guardadas correctamente');
+        toast.success('📝 Turno actualizado correctamente');
         const calendarApi = calendarRef.current?.getApi();
         if (calendarApi) fetchEvents(calendarApi.view.currentStart.toISOString(), calendarApi.view.currentEnd.toISOString());
         setDetailModalOpen(false);
       } else {
-        toast.error('Error al guardar las notas');
+        toast.error('Error al actualizar el turno');
       }
     } catch (error) {
       toast.error('Error de conexión');
@@ -271,7 +361,6 @@ export default function AgendaTurnosPage() {
 
   const handleCancelTurno = async (fromDetail = false) => {
     if (!selectedTurno) return;
-
     const result = await Swal.fire({
       title: '¿Cancelar este turno?',
       text: 'Se enviará una notificación automática de cancelación al paciente.',
@@ -285,7 +374,6 @@ export default function AgendaTurnosPage() {
       color: '#f1f5f9',
       customClass: { popup: 'border border-slate-700 rounded-xl' }
     });
-
     if (!result.isConfirmed) return;
 
     setIsActionLoading(true);
@@ -311,48 +399,6 @@ export default function AgendaTurnosPage() {
     }
   };
 
-  const handleSubmitTurno = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDate || !formData.pacienteId || !formData.pacienteNombre) {
-      toast.error('Selecciona o crea un paciente primero');
-      return;
-    }
-
-    const [hours, minutes] = formData.hora.split(':');
-    const fechaInicio = new Date(selectedDate);
-    fechaInicio.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    const fechaFin = new Date(fechaInicio);
-    fechaFin.setMinutes(fechaFin.getMinutes() + formData.duracion);
-
-    try {
-      const res = await fetch('/api/turnos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pacienteId: formData.pacienteId,
-          profesionalId: selectedProf,
-          fechaInicio: fechaInicio.toISOString(),
-          fechaFin: fechaFin.toISOString(),
-          duracionMinutos: formData.duracion,
-          motivoConsulta: formData.motivo,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        toast.success('✅ Turno creado y notificaciones enviadas');
-        setIsModalOpen(false);
-        setFormData({ pacienteId: '', pacienteNombre: '', motivo: '', hora: '09:00', duracion: 60 });
-        const calendarApi = calendarRef.current?.getApi();
-        if (calendarApi) fetchEvents(calendarApi.view.currentStart.toISOString(), calendarApi.view.currentEnd.toISOString());
-      } else {
-        toast.error(data.message || 'Error al crear el turno');
-      }
-    } catch (error) {
-      toast.error('Error de conexión');
-    }
-  };
-
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
       case 'confirmado': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
@@ -362,11 +408,8 @@ export default function AgendaTurnosPage() {
     }
   };
 
-  // Limpieza del timeout al desmontar el componente
   useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    };
+    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
   }, []);
 
   if (status === 'loading' || isInitialLoading) {
@@ -438,12 +481,10 @@ export default function AgendaTurnosPage() {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* 1. MODAL DE CREACIÓN DE TURNO (UX MEJORADA)*/}
-      {/* ========================================== */}
+      {/* 1. MODAL DE CREACIÓN DE TURNO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-white">Agendar Nuevo Turno</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
@@ -452,111 +493,119 @@ export default function AgendaTurnosPage() {
             </div>
 
             {!showCreatePatient ? (
-              <form onSubmit={handleSubmitTurno} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Buscar Paciente</label>
-                  <div className="relative">
-                    <FontAwesomeIcon icon={isSearching ? faSpinner : faSearch} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isSearching ? 'text-sky-500 animate-spin' : 'text-slate-500'}`} />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none"
-                      placeholder="Escribe nombre, apellido o teléfono..."
-                      autoFocus
-                    />
-                  </div>
-                  
-                  {/* Lista de resultados con estados claros */}
-                  <div className="mt-2 max-h-48 overflow-y-auto border border-slate-700 rounded-lg bg-slate-800/50">
-                    {isSearching ? (
-                      <div className="p-4 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
-                        <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Buscando...
+              <form onSubmit={handleSubmitTurno} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Columna Izquierda: Datos del Turno */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-1">Buscar Paciente</label>
+                      <div className="relative">
+                        <FontAwesomeIcon icon={isSearching ? faSpinner : faSearch} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isSearching ? 'text-sky-500 animate-spin' : 'text-slate-500'}`} />
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={handleSearchChange}
+                          className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none"
+                          placeholder="Escribe nombre, apellido o teléfono..."
+                          autoFocus
+                        />
                       </div>
-                    ) : searchQuery.length < 2 ? (
-                      <div className="p-4 text-center text-sm text-slate-500">
-                        Escribe al menos 2 caracteres para buscar
-                      </div>
-                    ) : pacientesList.length > 0 ? (
-                      pacientesList.map((p) => (
-                        <button
-                          key={p._id}
-                          type="button"
-                          onClick={() => {
-                            setFormData({ ...formData, pacienteId: p._id, pacienteNombre: `${p.name} ${p.lastName}` });
-                            setSearchQuery('');
-                            setPacientesList([]);
-                          }}
-                          className={`w-full text-left px-4 py-3 hover:bg-sky-600/20 transition flex justify-between items-center border-b border-slate-700/50 last:border-0 ${formData.pacienteId === p._id ? 'bg-sky-600/30 text-sky-400' : 'text-slate-300'}`}
-                        >
-                          <div>
-                            <span className="font-medium">{p.name} {p.lastName}</span>
-                            {p.email && <span className="block text-xs text-slate-500">{p.email}</span>}
+                      <div className="mt-2 max-h-40 overflow-y-auto border border-slate-700 rounded-lg bg-slate-800/50">
+                        {isSearching ? (
+                          <div className="p-4 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
+                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Buscando...
                           </div>
-                          <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">{p.phone || 'Sin tel.'}</span>
+                        ) : searchQuery.length < 2 ? (
+                          <div className="p-4 text-center text-sm text-slate-500">Escribe al menos 2 caracteres</div>
+                        ) : pacientesList.length > 0 ? (
+                          pacientesList.map((p) => (
+                            <button
+                              key={p._id}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, pacienteId: p._id, pacienteNombre: `${p.name} ${p.lastName}` });
+                                setSearchQuery('');
+                                setPacientesList([]);
+                              }}
+                              className={`w-full text-left px-4 py-2 hover:bg-sky-600/20 transition flex justify-between items-center border-b border-slate-700/50 last:border-0 ${formData.pacienteId === p._id ? 'bg-sky-600/30 text-sky-400' : 'text-slate-300'}`}
+                            >
+                              <span>{p.name} {p.lastName}</span>
+                              <span className="text-xs text-slate-500">{p.phone || 'Sin tel.'}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center text-sm text-slate-500">No se encontraron pacientes</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {formData.pacienteId && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 flex-shrink-0" />
+                          <span className="text-sm text-emerald-200 truncate">Paciente: <strong>{formData.pacienteNombre}</strong></span>
+                        </div>
+                        <button type="button" onClick={() => { setFormData({ ...formData, pacienteId: '', pacienteNombre: '' }); setSearchQuery(''); setPacientesList([]); }} className="flex-shrink-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded transition" title="Cambiar paciente">
+                          <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                         </button>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-sm text-slate-500">
-                        No se encontraron pacientes con "{searchQuery}"
                       </div>
                     )}
-                  </div>
-                </div>
 
-                              {formData.pacienteId && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 flex-shrink-0" />
-                      <span className="text-sm text-emerald-200 truncate">
-                        Paciente: <strong>{formData.pacienteNombre}</strong>
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({ ...formData, pacienteId: '', pacienteNombre: '' });
-                        setSearchQuery('');
-                        setPacientesList([]);
-                      }}
-                      className="flex-shrink-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded transition"
-                      title="Cambiar paciente"
-                    >
-                      <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                    <button type="button" onClick={() => setShowCreatePatient(true)} className="w-full py-2.5 border border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-sky-500 hover:bg-sky-500/10 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                      <FontAwesomeIcon icon={faUserPlus} /> ¿No está en la lista? Crear paciente nuevo
                     </button>
-                  </div>
-                )}
 
-                <button
-                  type="button"
-                  onClick={() => setShowCreatePatient(true)}
-                  className="w-full py-2.5 border border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-sky-500 hover:bg-sky-500/10 rounded-lg text-sm transition flex items-center justify-center gap-2"
-                >
-                  <FontAwesomeIcon icon={faUserPlus} /> ¿No está en la lista? Crear paciente nuevo
-                </button>
-
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div>
-                    <label className="block text-sm text-slate-400 mb-1">Fecha</label>
-                    <input type="date" value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''} onChange={e => setSelectedDate(new Date(e.target.value))}
-                      className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required />
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1">Fecha</label>
+                        <input type="date" value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''} onChange={e => setSelectedDate(new Date(e.target.value))} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1">Hora</label>
+                        <input type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-1">Motivo</label>
+                      <textarea value={formData.motivo} onChange={e => setFormData({ ...formData, motivo: e.target.value })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Evaluación inicial" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm text-slate-400 mb-1">Hora</label>
-                    <input type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required />
+
+                  {/* Columna Derecha: Carga de Imágenes */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faFileMedical} className="text-sky-500" /> Documentación Adjunta (Opcional)
+                    </h3>
+                    <FileUpload 
+                      label="Orden Médica" 
+                      file={turnoFiles.orden} 
+                      preview={turnoPreviews.orden} 
+                      onChange={(file: File | null) => handleFileChange('orden', file)} 
+                      onRemove={() => handleFileChange('orden', null)} 
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FileUpload 
+                        label="DNI Frente" 
+                        file={turnoFiles.dniFrente} 
+                        preview={turnoPreviews.dniFrente} 
+                        onChange={(file: File | null) => handleFileChange('dniFrente', file)} 
+                        onRemove={() => handleFileChange('dniFrente', null)} 
+                      />
+                      <FileUpload 
+                        label="DNI Dorso" 
+                        file={turnoFiles.dniDorso} 
+                        preview={turnoPreviews.dniDorso} 
+                        onChange={(file: File | null) => handleFileChange('dniDorso', file)} 
+                        onRemove={() => handleFileChange('dniDorso', null)} 
+                      />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm text-slate-400 mb-1">Motivo</label>
-                  <textarea value={formData.motivo} onChange={e => setFormData({ ...formData, motivo: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Evaluación inicial" />
-                </div>
 
-                <div className="pt-2 flex gap-3">
+                <div className="pt-4 border-t border-slate-800 flex gap-3">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-800 transition">Cancelar</button>
                   <button type="submit" disabled={!formData.pacienteId} className="flex-1 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
-                    <FontAwesomeIcon icon={faSave} /> Confirmar
+                    <FontAwesomeIcon icon={faSave} /> Confirmar y Guardar
                   </button>
                 </div>
               </form>
@@ -571,7 +620,6 @@ export default function AgendaTurnosPage() {
                 </div>
                 <input required type="email" placeholder="Correo electrónico *" value={newPatient.email} onChange={e => setNewPatient({ ...newPatient, email: e.target.value })} className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
                 <input required type="tel" placeholder="Teléfono *" value={newPatient.phone} onChange={e => setNewPatient({ ...newPatient, phone: e.target.value })} className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
-
                 <div className="pt-2 flex gap-3">
                   <button type="button" onClick={() => setShowCreatePatient(false)} className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-800 transition">Volver</button>
                   <button type="submit" disabled={isCreatingPatient} className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
@@ -610,10 +658,10 @@ export default function AgendaTurnosPage() {
         </div>
       )}
 
-      {/* 3. MODAL DE DETALLE (FICHA DE TURNO) */}
+      {/* 3. MODAL DE DETALLE (FICHA DE TURNO CON IMÁGENES) */}
       {detailModalOpen && selectedTurno && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <FontAwesomeIcon icon={faFileMedical} className="text-sky-500" /> Ficha del Turno
@@ -622,53 +670,90 @@ export default function AgendaTurnosPage() {
                 <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
               </button>
             </div>
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between items-start">
-                <p className="text-xl font-semibold text-white">{selectedTurno.title}</p>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getEstadoBadge(selectedTurno.estado)}`}>{selectedTurno.estado}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 bg-slate-800/50 p-4 rounded-xl">
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Fecha</p>
-                  <p className="text-white font-medium">{new Date(selectedTurno.start).toLocaleDateString('es-AR')}</p>
+            
+            <form onSubmit={handleUpdateTurno} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Columna Izquierda: Datos y Notas */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <p className="text-xl font-semibold text-white">{selectedTurno.title}</p>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getEstadoBadge(selectedTurno.estado)}`}>{selectedTurno.estado}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 bg-slate-800/50 p-4 rounded-xl">
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wider">Fecha</p>
+                      <p className="text-white font-medium">{new Date(selectedTurno.start).toLocaleDateString('es-AR')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wider">Horario</p>
+                      <p className="text-white font-medium">
+                        {new Date(selectedTurno.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} -
+                        {new Date(selectedTurno.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
+                      </p>
+                    </div>
+                  </div>
+                  {selectedTurno.motivo && (
+                    <div>
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Motivo de Consulta</p>
+                      <p className="text-slate-300 bg-slate-800/30 p-3 rounded-lg text-sm">{selectedTurno.motivo}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faInfoCircle} className="text-amber-500" /> Notas Internas
+                    </p>
+                    <textarea
+                      value={selectedTurno.notasInternas}
+                      onChange={(e) => setSelectedTurno({ ...selectedTurno, notasInternas: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none text-sm"
+                      rows={4}
+                      placeholder="Ej: Paciente debe traer estudios previos..."
+                    />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Horario</p>
-                  <p className="text-white font-medium">
-                    {new Date(selectedTurno.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} -
-                    {new Date(selectedTurno.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
-                  </p>
+
+                {/* Columna Derecha: Imágenes */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación Adjunta
+                  </h3>
+                  <FileUpload 
+                    label="Orden Médica" 
+                    file={editFiles.orden} 
+                    preview={editPreviews.orden} 
+                    onChange={(file: File | null) => handleFileChange('orden', file, true)} 
+                    onRemove={() => handleFileChange('orden', null, true)} 
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FileUpload 
+                      label="DNI Frente" 
+                      file={editFiles.dniFrente} 
+                      preview={editPreviews.dniFrente} 
+                      onChange={(file: File | null) => handleFileChange('dniFrente', file, true)} 
+                      onRemove={() => handleFileChange('dniFrente', null, true)} 
+                    />
+                    <FileUpload 
+                      label="DNI Dorso" 
+                      file={editFiles.dniDorso} 
+                      preview={editPreviews.dniDorso} 
+                      onChange={(file: File | null) => handleFileChange('dniDorso', file, true)} 
+                      onRemove={() => handleFileChange('dniDorso', null, true)} 
+                    />
+                  </div>
                 </div>
               </div>
-              {selectedTurno.motivo && (
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Motivo de Consulta</p>
-                  <p className="text-slate-300 bg-slate-800/30 p-3 rounded-lg text-sm">{selectedTurno.motivo}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faInfoCircle} className="text-amber-500" /> Notas Internas
-                </p>
-                <textarea
-                  value={selectedTurno.notasInternas}
-                  onChange={(e) => setSelectedTurno({ ...selectedTurno, notasInternas: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none text-sm"
-                  rows={3}
-                  placeholder="Ej: Paciente debe traer estudios previos..."
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 pt-4 border-t border-slate-800">
-              {selectedTurno.estado !== 'cancelado' && selectedTurno.estado !== 'completado' && (
-                <button onClick={() => handleCancelTurno(true)} disabled={isActionLoading} className="px-4 py-2.5 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/10 transition font-medium disabled:opacity-50 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faTrash} />  Cancelar Turno
+
+              <div className="flex gap-3 pt-4 border-t border-slate-800">
+                {selectedTurno.estado !== 'cancelado' && selectedTurno.estado !== 'completado' && (
+                  <button type="button" onClick={() => handleCancelTurno(true)} disabled={isActionLoading} className="px-4 py-2.5 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/10 transition font-medium disabled:opacity-50 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faTrash} /> Cancelar Turno
+                  </button>
+                )}
+                <button type="submit" disabled={isSavingNotes} className="flex-1 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50">
+                  {isSavingNotes ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><FontAwesomeIcon icon={faSave} /> Guardar Cambios</>}
                 </button>
-              )}
-              <button onClick={handleSaveNotes} disabled={isSavingNotes} className="flex-1 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50">
-                {isSavingNotes ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><FontAwesomeIcon icon={faSave} /> Guardar Notas</>}
-              </button>
-            </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -15,6 +15,9 @@ export interface ITurno extends Document {
   // Motivos y notas
   motivoConsulta?: string;
   notasInternas?: string; // Solo visibles para staff
+  ordenMedicaUrl?: string;
+  dniFrenteUrl?: string;
+  dniDorsoUrl?: string;
   motivoCancelacion?: string;
   
   // Datos financieros del turno (se congelan al momento de la reserva)
@@ -45,6 +48,10 @@ const TurnoSchema = new Schema<ITurno>({
   motivoConsulta: { type: String, trim: true },
   notasInternas: { type: String, trim: true },
   motivoCancelacion: { type: String, trim: true },
+
+  ordenMedicaUrl: { type: String, trim: true },
+  dniFrenteUrl: { type: String, trim: true },
+  dniDorsoUrl: { type: String, trim: true },
   
   valorAcordado: { type: Number, default: 0 },
   moneda: { type: String, default: 'ARS' },

@@ -22,7 +22,8 @@ import {
   FaNotesMedical,
   FaCalendarAlt,
   FaUserMd,
-  FaUserInjured
+  FaUserInjured,
+  FaUserClock
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
@@ -53,7 +54,7 @@ const modules = [
   {
     id: 'profesionales',
     title: 'Profesionales',
-    description: 'Gestiona tu perfil profesional, especialidades, horarios y honorarios.', 
+    description: 'Gestiona tu perfil profesional, especialidades, horarios y honorarios.',
     href: '/admin/profesionales',
     roles: ['admin', 'profesionales', 'administrativos'], // ✅ Perfecto
   },
@@ -72,6 +73,14 @@ const modules = [
     icon: <FaNotesMedical className="text-2xl text-zinc-400" />,
     href: '/admin/sesiones',
     roles: ['admin', 'profesionales'],
+  },
+  {
+    id: 'lista-espera',
+    title: 'Lista de Espera',
+    description: 'Alertas y solicitudes de turnos de pacientes.',
+    icon: <FaUserClock className="text-2xl text-zinc-400" />, // Asegúrate de importar FaUserClock
+    href: '/admin/lista-espera',
+    roles: ['admin', 'administrativos'], // ✅ Solo estos dos roles
   },
   {
     id: 'pagos',

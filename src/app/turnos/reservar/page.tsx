@@ -5,15 +5,39 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarCheck, faUserMd, faArrowLeft, faClock, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarCheck, faUserMd, faArrowLeft, faClock, faCheckCircle, faImage, faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 interface Profesional {
   _id: string;
   name: string;
   lastName: string;
   especialidades: string[];
-  honorarios?: { valorSesion?: number; moneda?: string };
+  honorarios?: { valorSesion?: number; moneda?: string; duracionSesion?: number };
+  tiempoPreparacionMinutos?: number;
 }
+
+// Componente reutilizable para carga de imágenes
+const FileUpload = ({ label, file, preview, onChange, onRemove }: any) => (
+  <div className="space-y-2">
+    <label className="block text-sm text-slate-400 font-medium">{label}</label>
+    {preview ? (
+      <div className="relative group">
+        <img src={preview} alt={label} className="w-full h-32 object-cover rounded-lg border border-slate-700 bg-slate-800" />
+        <button type="button" onClick={onRemove} className="absolute top-2 right-2 bg-red-500/90 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg" title="Eliminar imagen">
+          <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+        </button>
+      </div>
+    ) : (
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 hover:border-sky-500/50 transition">
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <FontAwesomeIcon icon={faImage} className="w-8 h-8 text-slate-500 mb-2" />
+          <p className="text-xs text-slate-400 text-center px-2">Click para subir imagen<br/>(Opcional)</p>
+        </div>
+        <input type="file" className="hidden" accept="image/*" onChange={(e) => onChange(e.target.files?.[0] || null)} />
+      </label>
+    )}
+  </div>
+);
 
 export default function ReservarTurnoPage() {
   const { data: session, status } = useSession();
@@ -24,8 +48,15 @@ export default function ReservarTurnoPage() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [motivo, setMotivo] = useState('');
-  const [step, setStep] = useState(1); // 1: Elegir Prof, 2: Fecha/Hora, 3: Confirmar
+  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ✅ NUEVOS ESTADOS PARA DISPONIBILIDAD
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  const [files, setFiles] = useState({ ordenMedica: null as File | null, dniFrente: null as File | null, dniDorso: null as File | null });
+  const [previews, setPreviews] = useState({ ordenMedica: '', dniFrente: '', dniDorso: '' });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -39,7 +70,42 @@ export default function ReservarTurnoPage() {
     }
   }, [status, router]);
 
-  const handleReservar = async () => {
+  // ✅ CONSULTAR DISPONIBILIDAD CUANDO CAMBIA LA FECHA O EL PROFESIONAL
+  useEffect(() => {
+    const fetchDisponibilidad = async () => {
+      if (selectedProf && selectedDate) {
+        setLoadingSlots(true);
+        setSelectedTime(''); // Resetear hora seleccionada al cambiar fecha
+        try {
+          const res = await fetch(`/api/turnos/disponibilidad?profesionalId=${selectedProf._id}&fecha=${selectedDate}`);
+          const data = await res.json();
+          if (data.success) {
+            setAvailableSlots(data.slots);
+          }
+        } catch (error) {
+          console.error('Error cargando horarios:', error);
+          toast.error('No se pudieron cargar los horarios disponibles.');
+        } finally {
+          setLoadingSlots(false);
+        }
+      }
+    };
+    fetchDisponibilidad();
+  }, [selectedProf, selectedDate]);
+
+  const handleFileChange = (type: 'ordenMedica' | 'dniFrente' | 'dniDorso', file: File | null) => {
+    setFiles(prev => ({ ...prev, [type]: file }));
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviews(prev => ({ ...prev, [type]: reader.result as string }));
+      reader.readAsDataURL(file);
+    } else {
+      setPreviews(prev => ({ ...prev, [type]: '' }));
+    }
+  };
+
+  const handleReservar = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!session?.user?.id || !selectedProf || !selectedDate || !selectedTime) return;
     setIsSubmitting(true);
 
@@ -48,24 +114,24 @@ export default function ReservarTurnoPage() {
     fechaInicio.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
     const fechaFin = new Date(fechaInicio);
-    fechaFin.setMinutes(fechaFin.getMinutes() + 60); // Duración por defecto 60 min
+    const duracion = selectedProf.honorarios?.duracionSesion || 60;
+    const prep = selectedProf.tiempoPreparacionMinutos || 0;
+    fechaFin.setMinutes(fechaFin.getMinutes() + duracion + prep);
+
+    const formData = new FormData();
+    formData.append('pacienteId', session.user.id);
+    formData.append('profesionalId', selectedProf._id);
+    formData.append('fechaInicio', fechaInicio.toISOString());
+    formData.append('fechaFin', fechaFin.toISOString());
+    formData.append('duracionMinutos', duracion.toString());
+    formData.append('motivoConsulta', motivo);
+    
+    if (files.ordenMedica) formData.append('ordenMedica', files.ordenMedica);
+    if (files.dniFrente) formData.append('dniFrente', files.dniFrente);
+    if (files.dniDorso) formData.append('dniDorso', files.dniDorso);
 
     try {
-      const res = await fetch('/api/turnos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // ✅ AQUÍ ESTÁ LA MAGIA: El sistema usa el ID de la sesión automáticamente.
-          // El paciente nunca lo ve ni lo escribe.
-          pacienteId: session.user.id, 
-          profesionalId: selectedProf._id,
-          fechaInicio: fechaInicio.toISOString(),
-          fechaFin: fechaFin.toISOString(),
-          duracionMinutos: 60,
-          motivoConsulta: motivo,
-        }),
-      });
-
+      const res = await fetch('/api/turnos', { method: 'POST', body: formData });
       const data = await res.json();
       if (res.ok) {
         toast.success('✅ ¡Solicitud enviada! Te llegará un correo de confirmación.');
@@ -81,12 +147,11 @@ export default function ReservarTurnoPage() {
   };
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" /></div>;
   }
+
+  // Horarios base para mostrar los ocupados como deshabilitados (UX)
+  const baseSlots = ['09:00', '10:00', '11:00', '12:00', '15:00', '16:00', '17:00', '18:00'];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
@@ -95,16 +160,13 @@ export default function ReservarTurnoPage() {
           <FontAwesomeIcon icon={faArrowLeft} /> Volver a mi perfil
         </button>
 
-        {/* Stepper de pasos */}
         <div className="flex items-center justify-between mb-8 px-4">
           {[1, 2, 3].map((s) => (
             <div key={s} className={`flex items-center gap-2 ${step >= s ? 'text-sky-400' : 'text-slate-600'}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step >= s ? 'border-sky-500 bg-sky-500/20' : 'border-slate-700'}`}>
                 {step > s ? <FontAwesomeIcon icon={faCheckCircle} /> : s}
               </div>
-              <span className="hidden sm:inline text-sm font-medium">
-                {s === 1 ? 'Profesional' : s === 2 ? 'Fecha y Hora' : 'Confirmar'}
-              </span>
+              <span className="hidden sm:inline text-sm font-medium">{s === 1 ? 'Profesional' : s === 2 ? 'Fecha y Hora' : 'Confirmar'}</span>
             </div>
           ))}
         </div>
@@ -135,7 +197,7 @@ export default function ReservarTurnoPage() {
           </div>
         )}
 
-        {/* PASO 2: Elegir Fecha y Hora */}
+        {/* PASO 2: Elegir Fecha y Hora (CON LÓGICA DE DISPONIBILIDAD) */}
         {step === 2 && selectedProf && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold mb-4">Elige fecha y hora con {selectedProf.name}</h2>
@@ -149,24 +211,55 @@ export default function ReservarTurnoPage() {
 
             {selectedDate && (
               <div>
-                <label className="block text-sm text-slate-400 mb-2">Horarios disponibles</label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                  {['09:00', '10:00', '11:00', '15:00', '16:00', '17:00'].map(time => (
-                    <button key={time} onClick={() => setSelectedTime(time)}
-                      className={`py-2 rounded-lg border text-sm font-medium transition ${
-                        selectedTime === time 
-                        ? 'bg-sky-600 border-sky-500 text-white' 
-                        : 'bg-slate-900 border-slate-700 text-slate-300 hover:border-sky-500/50'
-                      }`}>
-                      {time}
-                    </button>
-                  ))}
-                </div>
+                <label className="block text-sm text-slate-400 mb-2 flex items-center gap-2">
+                  Horarios disponibles 
+                  {loadingSlots && <FontAwesomeIcon icon={faSpinner} className="animate-spin text-sky-500 text-xs" />}
+                </label>
+                
+                {loadingSlots ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {[1, 2, 3, 4].map(i => (
+                      <div key={i} className="h-10 bg-slate-800 rounded-lg animate-pulse" />
+                    ))}
+                  </div>
+                ) : availableSlots.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {baseSlots.map(time => {
+                      const isAvailable = availableSlots.includes(time);
+                      return (
+                        <button 
+                          key={time} 
+                          disabled={!isAvailable}
+                          onClick={() => isAvailable && setSelectedTime(time)}
+                          className={`py-2 rounded-lg border text-sm font-medium transition relative ${
+                            selectedTime === time 
+                              ? 'bg-sky-600 border-sky-500 text-white' 
+                              : isAvailable 
+                                ? 'bg-slate-900 border-slate-700 text-slate-300 hover:border-sky-500/50 hover:text-white' 
+                                : 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed line-through decoration-slate-600'
+                          }`}
+                          title={!isAvailable ? 'Horario ocupado' : 'Disponible'}
+                        >
+                          {time}
+                          {!isAvailable && (
+                            <span className="absolute -top-2 -right-2 w-4 h-4 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center text-[10px] border border-red-500/30">
+                              <FontAwesomeIcon icon={faTimes} />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-200 text-sm flex items-center gap-2">
+                    <FontAwesomeIcon icon={faClock} /> No hay horarios disponibles para esta fecha. Por favor, selecciona otro día.
+                  </div>
+                )}
               </div>
             )}
 
             <div className="flex gap-3 pt-4">
-              <button onClick={() => setStep(1)} className="flex-1 py-3 border border-slate-700 rounded-lg hover:bg-slate-800 transition">Atrás</button>
+              <button onClick={() => { setStep(1); setSelectedDate(''); setSelectedTime(''); }} className="flex-1 py-3 border border-slate-700 rounded-lg hover:bg-slate-800 transition">Atrás</button>
               <button disabled={!selectedDate || !selectedTime} onClick={() => setStep(3)}
                 className="flex-1 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-lg font-medium transition">
                 Continuar
@@ -175,11 +268,11 @@ export default function ReservarTurnoPage() {
           </div>
         )}
 
-        {/* PASO 3: Confirmar */}
+        {/* PASO 3: Confirmar (Igual que antes, pero ahora con los datos reales) */}
         {step === 3 && selectedProf && (
-          <div className="space-y-6">
+          <form onSubmit={handleReservar} className="space-y-6">
             <h2 className="text-2xl font-bold mb-4">Confirma tu reserva</h2>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
               <div className="flex items-center gap-3">
                 <FontAwesomeIcon icon={faUserMd} className="text-sky-500 text-xl" />
                 <div>
@@ -200,16 +293,28 @@ export default function ReservarTurnoPage() {
                   className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none"
                   placeholder="Ej: Dolor de rodilla derecha..." />
               </div>
+
+              <div className="border-t border-slate-800 pt-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación Adjunta (Opcional)
+                </h3>
+                <div className="space-y-4">
+                  <FileUpload label="Orden Médica" file={files.ordenMedica} preview={previews.ordenMedica} onChange={(file: File | null) => handleFileChange('ordenMedica', file)} onRemove={() => handleFileChange('ordenMedica', null)} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FileUpload label="DNI Frente" file={files.dniFrente} preview={previews.dniFrente} onChange={(file: File | null) => handleFileChange('dniFrente', file)} onRemove={() => handleFileChange('dniFrente', null)} />
+                    <FileUpload label="DNI Dorso" file={files.dniDorso} preview={previews.dniDorso} onChange={(file: File | null) => handleFileChange('dniDorso', file)} onRemove={() => handleFileChange('dniDorso', null)} />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={() => setStep(2)} className="flex-1 py-3 border border-slate-700 rounded-lg hover:bg-slate-800 transition">Modificar</button>
-              <button disabled={isSubmitting} onClick={handleReservar}
-                className="flex-1 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-800 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+              <button type="button" onClick={() => setStep(2)} className="flex-1 py-3 border border-slate-700 rounded-lg hover:bg-slate-800 transition">Modificar</button>
+              <button type="submit" disabled={isSubmitting} className="flex-1 py-3 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-800 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
                 {isSubmitting ? 'Procesando...' : <><FontAwesomeIcon icon={faCheckCircle} /> Confirmar Reserva</>}
               </button>
             </div>
-          </div>
+          </form>
         )}
       </div>
     </div>
