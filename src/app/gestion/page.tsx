@@ -23,7 +23,9 @@ import {
   FaCalendarAlt,
   FaUserMd,
   FaUserInjured,
-  FaUserClock
+  FaUserClock,
+  FaCashRegister,
+  FaDumbbell
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
@@ -108,6 +110,30 @@ const modules = [
     icon: <FaChartBar className="text-2xl text-zinc-400" />,
     href: '/admin/reportes',
     roles: ['admin', 'administrativos'],
+  },
+    {
+    id: 'ejercicios',
+    title: 'Planes de Ejercicios',
+    description: 'Asigna rutinas domiciliarias con videos y realiza seguimiento de cumplimiento.',
+    icon: <FaDumbbell className="text-2xl text-zinc-400" />, // o FaRunning
+    href: '/admin/ejercicios',
+    roles: ['admin', 'profesionales'],
+  },
+  {
+    id: 'evolucion',
+    title: 'Evolución y Métricas',
+    description: 'Gráficos de progreso del dolor (EVA), rango de movimiento y objetivos.',
+    icon: <FaChartLine className="text-2xl text-zinc-400" />,
+    href: '/admin/evolucion',
+    roles: ['admin', 'profesionales'],
+  },
+  {
+    id: 'finanzas',
+    title: 'Caja y Pagos',
+    description: 'Registro de cobros, deudas de pacientes y cierre de caja diario por profesional.',
+    icon: <FaCashRegister className="text-2xl text-zinc-400" />, // o FaMoneyBillWave
+    href: '/admin/finanzas',
+    roles: ['admin', 'administrativos'], // El profesional solo ve sus propios números si se desea
   },
   {
     id: 'bitacora',
