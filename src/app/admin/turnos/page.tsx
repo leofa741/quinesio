@@ -52,7 +52,6 @@ const FileUpload = ({ label, file, preview, onChange, onRemove }: any) => (
   </div>
 );
 
-// ✅ FUNCIÓN HELPER: Convierte una fecha local a formato "YYYY-MM-DD" para el input
 const formatDateToLocalInput = (date: Date | null) => {
   if (!date) return '';
   const year = date.getFullYear();
@@ -71,6 +70,8 @@ export default function AgendaTurnosPage() {
   const [selectedProf, setSelectedProf] = useState<string>('');
   const [events, setEvents] = useState<any[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const [statusFilter, setStatusFilter] = useState<string>('todos');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -201,7 +202,6 @@ export default function AgendaTurnosPage() {
   };
 
   const handleDateSelect = (selectInfo: any) => {
-    // FullCalendar ya nos da la fecha en hora local
     setSelectedDate(selectInfo.start);
     setFormData(prev => ({ ...prev, hora: selectInfo.startStr.split('T')[1].substring(0, 5) }));
     handleOpenNewTurno();
@@ -311,11 +311,8 @@ export default function AgendaTurnosPage() {
     if (!selectedDate || !formData.pacienteId || !formData.pacienteNombre) { toast.error('Selecciona o crea un paciente primero'); return; }
     
     const [hours, minutes] = formData.hora.split(':');
-    
-    // ✅ CORRECCIÓN DE ZONA HORARIA:
-    // selectedDate ya es un objeto Date local. Creamos la fecha final asegurando componentes locales.
     const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth(); // 0-indexed
+    const month = selectedDate.getMonth();
     const day = selectedDate.getDate();
     
     const fechaInicio = new Date(year, month, day, parseInt(hours), parseInt(minutes), 0, 0);
@@ -325,7 +322,6 @@ export default function AgendaTurnosPage() {
     const formDataToSend = new FormData();
     formDataToSend.append('pacienteId', formData.pacienteId);
     formDataToSend.append('profesionalId', selectedProf);
-    // toISOString() ahora convertirá correctamente la hora local a UTC para la base de datos
     formDataToSend.append('fechaInicio', fechaInicio.toISOString());
     formDataToSend.append('fechaFin', fechaFin.toISOString());
     formDataToSend.append('duracionMinutos', formData.duracion.toString());
@@ -444,55 +440,68 @@ export default function AgendaTurnosPage() {
     return (<div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" /></div>);
   }
 
+  const filteredEvents = statusFilter === 'todos' 
+    ? events 
+    : events.filter((event: any) => event.extendedProps.estado === statusFilter);
+
+  const currentProfName = profesionales.find(p => p._id === selectedProf);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mt-45 mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-6">
+        
+        {/* ✅ ENCABEZADO LIMPIO: Solo título, indicador de profesional y botón de acción */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
               <FontAwesomeIcon icon={faClock} className="text-sky-500" /> Agenda de Turnos
             </h1>
-            <p className="text-slate-400 text-sm mt-1">Gestiona la disponibilidad, recepciona y confirma reservas.</p>
-          </div>
-          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-lg w-full lg:w-auto min-w-[320px]">
-            <label className="flex items-center gap-2 text-sm font-semibold text-sky-400 mb-2">
-              <FontAwesomeIcon icon={faUserMd} /> 1. Selecciona un Profesional
-            </label>
-            <div className="relative">
-              <select value={selectedProf} onChange={(e) => { setSelectedProf(e.target.value); const calendarApi = calendarRef.current?.getApi(); if (calendarApi) fetchEvents(calendarApi.view.currentStart.toISOString(), calendarApi.view.currentEnd.toISOString()); }}
-                className="w-full appearance-none px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-500 transition-all cursor-pointer font-medium pr-10">
-                {profesionales.length === 0 ? (<option value="">Cargando profesionales...</option>) : profesionales.map(p => (<option key={p._id} value={p._id}>{p.name} {p.lastName}</option>))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2 flex items-start gap-1.5">
-              <FontAwesomeIcon icon={faInfoCircle} className="mt-0.5 flex-shrink-0" />
-              <span>El calendario se actualizará automáticamente con los turnos de este profesional.</span>
+            <p className="text-slate-400 text-sm mt-1 flex items-center gap-2 flex-wrap">
+              Gestiona la disponibilidad, recepciona y confirma reservas.
+              {currentProfName && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 text-xs font-medium border border-sky-500/20">
+                  <FontAwesomeIcon icon={faUserMd} className="w-3 h-3" />
+                  Viendo: {currentProfName.name} {currentProfName.lastName}
+                </span>
+              )}
             </p>
           </div>
-          <button onClick={handleOpenNewTurno} className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2 lg:self-center">
+          <button onClick={handleOpenNewTurno} className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2">
             <FontAwesomeIcon icon={faCalendarPlus} /> <span>Nuevo Turno</span>
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-4 mb-4 text-xs text-slate-400 bg-slate-900/50 p-3 rounded-lg border border-slate-800/50 w-fit">
-          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-500"></span> Pendiente</span>
-          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-emerald-500"></span> Confirmado</span>
-          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-slate-500"></span> Completado</span>
-          <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500"></span> Cancelado</span>
+        {/* ✅ FILTROS INTERACTIVOS DEL CALENDARIO */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            { id: 'todos', label: 'Todos' },
+            { id: 'pendiente', label: 'Pendiente', color: 'bg-amber-500' },
+            { id: 'confirmado', label: 'Confirmado', color: 'bg-emerald-500' },
+            { id: 'completado', label: 'Completado', color: 'bg-slate-500' },
+            { id: 'cancelado', label: 'Cancelado', color: 'bg-red-500' }
+          ].map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setStatusFilter(filter.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                statusFilter === filter.id
+                  ? 'bg-slate-800 border-sky-500 text-white shadow-lg shadow-sky-900/10'
+                  : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+              }`}
+            >
+              {filter.id !== 'todos' && <span className={`w-2.5 h-2.5 rounded-full ${filter.color}`}></span>}
+              {filter.label}
+            </button>
+          ))}
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl fc-theme-dark">
           <FullCalendar ref={calendarRef} plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} initialView="timeGridWeek"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' }} locale="es"
-            slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false} selectable={true} select={handleDateSelect} events={events}
+            slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false} selectable={true} select={handleDateSelect} 
+            events={filteredEvents}
             datesSet={(dateInfo) => {
-              setViewDates({ 
-                start: dateInfo.start.toISOString(), 
-                end: dateInfo.end.toISOString() 
-              });
+              setViewDates({ start: dateInfo.start.toISOString(), end: dateInfo.end.toISOString() });
               fetchEvents(dateInfo.start.toISOString(), dateInfo.end.toISOString());
             }} 
             eventClick={handleEventClick} height="auto" />
@@ -511,6 +520,35 @@ export default function AgendaTurnosPage() {
               <form onSubmit={handleSubmitTurno} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
+                    
+                    {/* ✅ NUEVO: Selector de Profesional movido al primer campo del modal */}
+                    <div>
+                      <label className="block text-sm text-slate-400 mb-1">Profesional</label>
+                      <div className="relative">
+                        <FontAwesomeIcon icon={faUserMd} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <select 
+                          value={selectedProf} 
+                          onChange={(e) => {
+                            const newProfId = e.target.value;
+                            setSelectedProf(newProfId);
+                            // Actualizar calendario inmediatamente al cambiar aquí
+                            const calendarApi = calendarRef.current?.getApi();
+                            if (calendarApi && newProfId) {
+                              fetchEvents(calendarApi.view.currentStart.toISOString(), calendarApi.view.currentEnd.toISOString());
+                            }
+                          }}
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 appearance-none"
+                        >
+                          {profesionales.map(p => (
+                            <option key={p._id} value={p._id}>{p.name} {p.lastName}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-sm text-slate-400 mb-1">Buscar Paciente</label>
                       <div className="relative">
@@ -544,7 +582,6 @@ export default function AgendaTurnosPage() {
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div>
                         <label className="block text-sm text-slate-400 mb-1">Fecha</label>
-                        {/* ✅ CORRECCIÓN DE ZONA HORARIA EN EL INPUT */}
                         <input 
                           type="date" 
                           value={formatDateToLocalInput(selectedDate)} 
