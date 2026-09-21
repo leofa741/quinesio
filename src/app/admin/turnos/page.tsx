@@ -446,7 +446,7 @@ export default function AgendaTurnosPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mt-40 mx-auto">
+      <div className="max-w-7xl mt-45 mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
