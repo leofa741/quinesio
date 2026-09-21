@@ -110,22 +110,6 @@ const modules = [
     roles: ['admin', 'administrativos'],
   },
   {
-    id: 'importar',
-    title: 'Importar desde Excel',
-    description: 'Cargar masivamente pacientes, turnos o pagos desde planillas.',
-    icon: <FaFileExcel className="text-2xl text-zinc-400" />,
-    href: '/admin/importar',
-    roles: ['admin'],
-  },
-  {
-    id: 'configuracion',
-    title: 'Configuración',
-    description: 'Ajustes generales, notificaciones y parámetros del sistema.',
-    icon: <FaCog className="text-2xl text-zinc-400" />,
-    href: '/admin/configuracion',
-    roles: ['admin'],
-  },
-  {
     id: 'bitacora',
     title: 'Bitacota de ingresos al sistema',
     description: 'Bitacota de ingresos al sistema .',
