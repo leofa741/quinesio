@@ -11,7 +11,7 @@ export default function PagosPage() {
       <div className="max-w-2xl mt-40 w-full">
         {/* Botón Volver */}
         <button
-          onClick={() => router.push('/admin')}
+          onClick={() => router.push('/gestion')}
           className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group"
         >
           <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
