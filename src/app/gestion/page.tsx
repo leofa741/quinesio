@@ -27,6 +27,7 @@ import {
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
+import { FaUserDoctor } from 'react-icons/fa6';
 
 // ─────────────────────────────────────────────────────────────
 // 🔹 Módulos disponibles (Fácilmente escalable)
@@ -55,6 +56,7 @@ const modules = [
     id: 'profesionales',
     title: 'Profesionales',
     description: 'Gestiona tu perfil profesional, especialidades, horarios y honorarios.',
+    icon: <FaUserDoctor className="text-2xl text-zinc-400" />,
     href: '/admin/profesionales',
     roles: ['admin', 'profesionales', 'administrativos'], // ✅ Perfecto
   },
@@ -83,14 +85,6 @@ const modules = [
     roles: ['admin', 'administrativos'], // ✅ Solo estos dos roles
   },
   {
-    id: 'pagos',
-    title: 'Gestión de Pagos',
-    description: 'Registrar pagos, métodos y calcular deudas por paciente.',
-    icon: <FaMoneyBillWave className="text-2xl text-zinc-400" />,
-    href: '/admin/pagos',
-    roles: ['admin', 'administrativos'],
-  },
-  {
     id: 'obras-sociales',
     title: 'Obras Sociales',
     description: 'Configurar prestadoras, planes y códigos de cobertura.',
@@ -98,6 +92,15 @@ const modules = [
     href: '/admin/obras-sociales',
     roles: ['admin', 'administrativos'],
   },
+  {
+    id: 'pagos',
+    title: 'Gestión de Pagos',
+    description: 'Registrar pagos, métodos y calcular deudas por paciente.',
+    icon: <FaMoneyBillWave className="text-2xl text-zinc-400" />,
+    href: '/admin/pagos',
+    roles: ['admin', 'administrativos'],
+  },
+
   {
     id: 'reportes',
     title: 'Reportes y Estadísticas',

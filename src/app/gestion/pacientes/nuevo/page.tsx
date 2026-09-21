@@ -1,4 +1,3 @@
-// app/gestion/pacientes/nuevo/page.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -11,6 +10,13 @@ import {
     FaHospital, FaIdCard, FaCalendarAlt, FaUpload, FaSpinner, FaCheck
 } from 'react-icons/fa';
 
+interface ObraSocialData {
+    _id: string;
+    nombre: string;
+    codigo: string;
+    planes: { nombre: string; codigo: string; cobertura: number; requiereAutorizacion: boolean }[];
+}
+
 export default function NuevoPacientePage() {
     const { data: session, status } = useSession();
     const router = useRouter();
@@ -21,7 +27,10 @@ export default function NuevoPacientePage() {
     const [previewImg, setPreviewImg] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    // 🔹 En el estado inicial del formData, agregar el campo faltante:
+    // 🔹 Estado para Obras Sociales dinámicas
+    const [obrasSociales, setObrasSociales] = useState<ObraSocialData[]>([]);
+    const [loadingOS, setLoadingOS] = useState(true);
+
     const [formData, setFormData] = useState({
         name: '',
         lastName: '',
@@ -30,10 +39,10 @@ export default function NuevoPacientePage() {
         address: '',
         city: '',
         zipCode: '',
-        obraSocial: '',              // nombre
-        obraSocialCodigo: '',        // ✅ correcto
-        obraSocialPlan: '',          // ✅ correcto
-        obraSocialNumeroAfiliado: '', // ✅ AGREGAR ESTE CAMPO (faltaba)
+        obraSocial: '',
+        obraSocialCodigo: '',
+        obraSocialPlan: '',
+        obraSocialNumeroAfiliado: '',
         diagnosticoPrincipal: '',
         fechaNacimiento: '',
     });
@@ -70,28 +79,55 @@ export default function NuevoPacientePage() {
         validate();
     }, [status, session, router]);
 
+    // 🔹 Cargar Obras Sociales al montar el componente
+    useEffect(() => {
+        const fetchObrasSociales = async () => {
+            try {
+                const res = await fetch('/api/obras-sociales?activas=true');
+                const data = await res.json();
+                if (data.success) {
+                    setObrasSociales(data.obrasSociales);
+                }
+            } catch (error) {
+                console.error('Error cargando obras sociales:', error);
+            } finally {
+                setLoadingOS(false);
+            }
+        };
+        fetchObrasSociales();
+    }, []);
+
     // 🔹 Handlers de formulario
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // ✅ Handler inteligente para selección de Obra Social
+    const handleOSChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedOS = obrasSociales.find(os => os.nombre === e.target.value);
+        
+        setFormData(prev => ({
+            ...prev,
+            obraSocial: selectedOS ? selectedOS.nombre : e.target.value,
+            obraSocialCodigo: selectedOS ? selectedOS.codigo : '',
+            obraSocialPlan: '', // Resetear plan al cambiar de OS
+        }));
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Validar tipo y tamaño
             if (!file.type.startsWith('image/')) {
                 toast.error('📷 Solo se permiten archivos de imagen');
                 return;
             }
-            if (file.size > 5 * 1024 * 1024) { // 5MB
+            if (file.size > 5 * 1024 * 1024) {
                 toast.error('📷 La imagen no puede superar los 5MB');
                 return;
             }
 
             setSelectedFile(file);
-
-            // Preview
             const reader = new FileReader();
             reader.onloadend = () => setPreviewImg(reader.result as string);
             reader.readAsDataURL(file);
@@ -101,7 +137,6 @@ export default function NuevoPacientePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validaciones básicas
         if (!formData.name || !formData.lastName || !formData.email) {
             toast.error('❌ Nombre, apellido y email son obligatorios');
             return;
@@ -117,10 +152,29 @@ export default function NuevoPacientePage() {
         try {
             const token = session?.user?.token;
 
-            // Preparar datos para enviar
+            // ✅ Estructurar la Obra Social exactamente como la espera el modelo de Mongoose
+            const obraSocialObj = formData.obraSocial ? {
+                nombre: formData.obraSocial,
+                codigo: formData.obraSocialCodigo,
+                plan: formData.obraSocialPlan,
+                numeroAfiliado: formData.obraSocialNumeroAfiliado,
+                activo: true
+            } : undefined;
+
             const payload = {
-                ...formData,
-                img: previewImg || undefined, // Enviar preview (la API podría subir a Cloudinary)
+                name: formData.name,
+                lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                address: formData.address,
+                city: formData.city,
+                zipCode: formData.zipCode,
+                fechaNacimiento: formData.fechaNacimiento || undefined,
+                diagnosticoPrincipal: formData.diagnosticoPrincipal || undefined,
+                obraSocial: obraSocialObj,
+                img: previewImg || undefined,
+                role: 'pacientes',
+                activo: true
             };
 
             const res = await fetch('/api/pacientes', {
@@ -149,7 +203,6 @@ export default function NuevoPacientePage() {
         }
     };
 
-    // 🔹 Loader / No autorizado
     if (status === 'loading' || loading || !isAuthorized) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -161,10 +214,11 @@ export default function NuevoPacientePage() {
         );
     }
 
+    // Buscar la OS seleccionada para mostrar sus planes
+    const selectedOSData = obrasSociales.find(os => os.nombre === formData.obraSocial);
+
     return (
         <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8">
-
-            {/* Header */}
             <div className="max-w-4xl mx-auto mt-32 mb-8">
                 <button
                     onClick={() => router.push('/gestion/pacientes')}
@@ -178,92 +232,41 @@ export default function NuevoPacientePage() {
                 </p>
             </div>
 
-            {/* Formulario */}
             <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-
                 {/* 🔹 Sección: Datos Personales */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <FaUser className="text-sky-400" /> Datos Personales
                     </h2>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Nombre */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Nombre *</label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: Juan"
-                                required
-                            />
+                            <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="Ej: Juan" required />
                         </div>
-
-                        {/* Apellido */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Apellido *</label>
-                            <input
-                                type="text"
-                                name="lastName"
-                                value={formData.lastName}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: Pérez"
-                                required
-                            />
+                            <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="Ej: Pérez" required />
                         </div>
-
-                        {/* Email */}
                         <div className="md:col-span-2">
                             <label className="block text-sm text-slate-400 mb-1">Email *</label>
                             <div className="relative">
                                 <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                    placeholder="paciente@email.com"
-                                    required
-                                />
+                                <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="paciente@email.com" required />
                             </div>
-                            <p className="text-xs text-slate-500 mt-1">
-                                El paciente usará este email para iniciar sesión con Google
-                            </p>
+                            <p className="text-xs text-slate-500 mt-1">El paciente usará este email para iniciar sesión con Google</p>
                         </div>
-
-                        {/* Teléfono */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Teléfono</label>
                             <div className="relative">
                                 <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                    placeholder="+54 9 11 1234-5678"
-                                />
+                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="+54 9 11 1234-5678" />
                             </div>
                         </div>
-
-                        {/* Fecha de Nacimiento */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Fecha de Nacimiento</label>
                             <div className="relative">
                                 <FaCalendarAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                                <input
-                                    type="date"
-                                    name="fechaNacimiento"
-                                    value={formData.fechaNacimiento}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                />
+                                <input type="date" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" />
                             </div>
                         </div>
                     </div>
@@ -274,96 +277,96 @@ export default function NuevoPacientePage() {
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <FaMapMarkerAlt className="text-sky-400" /> Dirección
                     </h2>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Ciudad */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Ciudad</label>
-                            <input
-                                type="text"
-                                name="city"
-                                value={formData.city}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: Buenos Aires"
-                            />
+                            <input type="text" name="city" value={formData.city} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="Ej: Buenos Aires" />
                         </div>
-
-                        {/* Código Postal */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Código Postal</label>
-                            <input
-                                type="text"
-                                name="zipCode"
-                                value={formData.zipCode}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: C1000"
-                            />
+                            <input type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="Ej: C1000" />
                         </div>
-
-                        {/* Dirección completa */}
                         <div className="md:col-span-2">
                             <label className="block text-sm text-slate-400 mb-1">Dirección</label>
-                            <input
-                                type="text"
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Calle y número, piso, depto..."
-                            />
+                            <input type="text" name="address" value={formData.address} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors" placeholder="Calle y número, piso, depto..." />
                         </div>
                     </div>
                 </div>
 
-                {/* 🔹 Sección: Obra Social */}
+                {/* 🔹 Sección: Obra Social (INTELIGENTE) */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <FaHospital className="text-sky-400" /> Obra Social
+                        <FaHospital className="text-sky-400" /> Obra Social / Prepaga
                     </h2>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Nombre OS */}
+                        {/* Selector de Obra Social */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1">Obra Social</label>
-                            <input
-                                type="text"
-                                name="obraSocial"
-                                value={formData.obraSocial}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: OSDE, Swiss Medical..."
-                            />
+                            {loadingOS ? (
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-400">
+                                    <FaSpinner className="animate-spin" /> Cargando...
+                                </div>
+                            ) : (
+                                <select
+                                    name="obraSocial"
+                                    value={formData.obraSocial}
+                                    onChange={handleOSChange}
+                                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors appearance-none"
+                                >
+                                    <option value="">Seleccionar o escribir manualmente...</option>
+                                    {obrasSociales.map((os) => (
+                                        <option key={os._id} value={os.nombre}>{os.nombre}</option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
 
-                        {/* Código OS */}
+                        {/* Código (Autocompletado pero editable) */}
                         <div>
-                            <label className="block text-sm text-slate-400 mb-1">Código de Afiliado</label>
+                            <label className="block text-sm text-slate-400 mb-1">Código de RNI / PAMI</label>
                             <input
                                 type="text"
                                 name="obraSocialCodigo"
                                 value={formData.obraSocialCodigo}
                                 onChange={handleChange}
                                 className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: 123456789"
+                                placeholder="Se autocompleta o escribí..."
                             />
                         </div>
 
-                        {/* Plan */}
-                         <div>
-                            <label className="block text-sm text-slate-400 mb-1">Plan / Cobertura</label>
-                            <input
-                                type="text"
-                                name="obraSocialPlan"
-                                value={formData.obraSocialPlan}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
-                                placeholder="Ej: Plan 300, Platinum..."
-                            />
-                        </div>
+                        {/* Selector de Plan (Solo si la OS tiene planes cargados) */}
+                        {selectedOSData && selectedOSData.planes.length > 0 ? (
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-1">Plan / Cobertura</label>
+                                <select
+                                    name="obraSocialPlan"
+                                    value={formData.obraSocialPlan}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors appearance-none"
+                                >
+                                    <option value="">Seleccionar plan...</option>
+                                    {selectedOSData.planes.map((plan, idx) => (
+                                        <option key={idx} value={plan.nombre}>
+                                            {plan.nombre} (Cob: {plan.cobertura}%)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-1">Plan / Cobertura</label>
+                                <input
+                                    type="text"
+                                    name="obraSocialPlan"
+                                    value={formData.obraSocialPlan}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 transition-colors"
+                                    placeholder="Ej: Plan 300, Platinum..."
+                                />
+                            </div>
+                        )}
                     
-                          <div>
+                        <div>
                             <label className="block text-sm text-slate-400 mb-1">N° de Afiliado</label>
                             <input
                                 type="text"
@@ -377,31 +380,21 @@ export default function NuevoPacientePage() {
                     </div>
                 </div>
 
-                {/* 🔹 Sección: Foto de Perfil (Cloudinary) */}
+                {/* 🔹 Sección: Foto de Perfil */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <FaUpload className="text-sky-400" /> Foto de Perfil
                     </h2>
-
                     <div className="flex items-center gap-6">
-                        {/* Preview */}
-                        <div className="relative w-24 h-24 rounded-full bg-slate-800 overflow-hidden border-2 border-slate-700">
+                        <div className="relative w-24 h-24 rounded-full bg-slate-800 overflow-hidden border-2 border-slate-700 flex-shrink-0">
                             {previewImg ? (
                                 <Image src={previewImg} alt="Preview" fill className="object-cover" />
                             ) : (
                                 <FaUser className="w-full h-full p-6 text-slate-600" />
                             )}
                         </div>
-
-                        {/* Upload button */}
                         <div>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                accept="image/*"
-                                className="hidden"
-                            />
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
@@ -409,9 +402,7 @@ export default function NuevoPacientePage() {
                             >
                                 <FaUpload /> {previewImg ? 'Cambiar foto' : 'Seleccionar imagen'}
                             </button>
-                            <p className="text-xs text-slate-500 mt-2">
-                                JPG, PNG • Máx. 5MB
-                            </p>
+                            <p className="text-xs text-slate-500 mt-2">JPG, PNG • Máx. 5MB</p>
                         </div>
                     </div>
                 </div>
@@ -421,7 +412,6 @@ export default function NuevoPacientePage() {
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <FaIdCard className="text-sky-400" /> Notas Clínicas
                     </h2>
-
                     <div>
                         <label className="block text-sm text-slate-400 mb-1">Diagnóstico / Observaciones</label>
                         <textarea
@@ -436,7 +426,7 @@ export default function NuevoPacientePage() {
                 </div>
 
                 {/* 🔹 Botones de Acción */}
-                <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-800">
+                <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-800 pb-8">
                     <button
                         type="button"
                         onClick={() => router.push('/gestion/pacientes')}
@@ -450,13 +440,9 @@ export default function NuevoPacientePage() {
                         className="px-6 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed text-white font-medium transition-colors flex items-center gap-2"
                     >
                         {loading ? (
-                            <>
-                                <FaSpinner className="animate-spin" /> Guardando...
-                            </>
+                            <><FaSpinner className="animate-spin" /> Guardando...</>
                         ) : (
-                            <>
-                                <FaCheck /> Crear Paciente
-                            </>
+                            <><FaCheck /> Crear Paciente</>
                         )}
                     </button>
                 </div>
