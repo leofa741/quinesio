@@ -8,7 +8,7 @@ export default function PagosPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 flex items-center justify-center">
-      <div className="max-w-2xl w-full">
+      <div className="max-w-2xl mt-40 w-full">
         {/* Botón Volver */}
         <button
           onClick={() => router.push('/admin')}
