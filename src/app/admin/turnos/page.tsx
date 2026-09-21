@@ -52,15 +52,6 @@ const FileUpload = ({ label, file, preview, onChange, onRemove }: any) => (
   </div>
 );
 
-// ✅ FUNCIÓN HELPER: Convierte una fecha local a formato "YYYY-MM-DD" para el input
-const formatDateToLocalInput = (date: Date | null) => {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 export default function AgendaTurnosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -92,6 +83,7 @@ export default function AgendaTurnosPage() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
+  // ✅ NUEVOS ESTADOS PARA MÚLTIPLES PLANES
   const [activePlans, setActivePlans] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string | 'new' | null>(null);
   const [sessionStep, setSessionStep] = useState<'select' | 'form'>('select');
@@ -107,8 +99,6 @@ export default function AgendaTurnosPage() {
     tecnicasAplicadas: '', evolucion: '', proximosPasos: ''
   });
   const [isSubmittingSession, setIsSubmittingSession] = useState(false);
-
-  const [viewDates, setViewDates] = useState({ start: '', end: '' });
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/login?callbackUrl=/admin/turnos'); return; }
@@ -201,7 +191,6 @@ export default function AgendaTurnosPage() {
   };
 
   const handleDateSelect = (selectInfo: any) => {
-    // FullCalendar ya nos da la fecha en hora local
     setSelectedDate(selectInfo.start);
     setFormData(prev => ({ ...prev, hora: selectInfo.startStr.split('T')[1].substring(0, 5) }));
     handleOpenNewTurno();
@@ -309,28 +298,19 @@ export default function AgendaTurnosPage() {
   const handleSubmitTurno = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !formData.pacienteId || !formData.pacienteNombre) { toast.error('Selecciona o crea un paciente primero'); return; }
-    
     const [hours, minutes] = formData.hora.split(':');
-    
-    // ✅ CORRECCIÓN DE ZONA HORARIA:
-    // selectedDate ya es un objeto Date local. Creamos la fecha final asegurando componentes locales.
-    const year = selectedDate.getFullYear();
-    const month = selectedDate.getMonth(); // 0-indexed
-    const day = selectedDate.getDate();
-    
-    const fechaInicio = new Date(year, month, day, parseInt(hours), parseInt(minutes), 0, 0);
+    const fechaInicio = new Date(selectedDate);
+    fechaInicio.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     const fechaFin = new Date(fechaInicio);
     fechaFin.setMinutes(fechaFin.getMinutes() + formData.duracion);
 
     const formDataToSend = new FormData();
     formDataToSend.append('pacienteId', formData.pacienteId);
     formDataToSend.append('profesionalId', selectedProf);
-    // toISOString() ahora convertirá correctamente la hora local a UTC para la base de datos
     formDataToSend.append('fechaInicio', fechaInicio.toISOString());
     formDataToSend.append('fechaFin', fechaFin.toISOString());
     formDataToSend.append('duracionMinutos', formData.duracion.toString());
     formDataToSend.append('motivoConsulta', formData.motivo);
-    
     if (turnoFiles.orden) formDataToSend.append('ordenMedica', turnoFiles.orden);
     if (turnoFiles.dniFrente) formDataToSend.append('dniFrente', turnoFiles.dniFrente);
     if (turnoFiles.dniDorso) formDataToSend.append('dniDorso', turnoFiles.dniDorso);
@@ -428,17 +408,7 @@ export default function AgendaTurnosPage() {
     }
   };
 
-  useEffect(() => { 
-    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); }; 
-  }, []);
-
-  useEffect(() => {
-    if (!selectedProf || !viewDates.start) return;
-    const intervalId = setInterval(() => {
-      fetchEvents(viewDates.start, viewDates.end);
-    }, 30000);
-    return () => clearInterval(intervalId);
-  }, [selectedProf, viewDates.start, viewDates.end]);
+  useEffect(() => { return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); }; }, []);
 
   if (status === 'loading' || isInitialLoading) {
     return (<div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" /></div>);
@@ -488,14 +458,7 @@ export default function AgendaTurnosPage() {
           <FullCalendar ref={calendarRef} plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} initialView="timeGridWeek"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' }} locale="es"
             slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false} selectable={true} select={handleDateSelect} events={events}
-            datesSet={(dateInfo) => {
-              setViewDates({ 
-                start: dateInfo.start.toISOString(), 
-                end: dateInfo.end.toISOString() 
-              });
-              fetchEvents(dateInfo.start.toISOString(), dateInfo.end.toISOString());
-            }} 
-            eventClick={handleEventClick} height="auto" />
+            datesSet={(dateInfo) => fetchEvents(dateInfo.start.toISOString(), dateInfo.end.toISOString())} eventClick={handleEventClick} height="auto" />
         </div>
       </div>
 
@@ -542,25 +505,7 @@ export default function AgendaTurnosPage() {
                       <FontAwesomeIcon icon={faUserPlus} /> ¿No está en la lista? Crear paciente nuevo
                     </button>
                     <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div>
-                        <label className="block text-sm text-slate-400 mb-1">Fecha</label>
-                        {/* ✅ CORRECCIÓN DE ZONA HORARIA EN EL INPUT */}
-                        <input 
-                          type="date" 
-                          value={formatDateToLocalInput(selectedDate)} 
-                          onChange={e => {
-                            const val = e.target.value;
-                            if (val) {
-                              const [year, month, day] = val.split('-').map(Number);
-                              setSelectedDate(new Date(year, month - 1, day));
-                            } else {
-                              setSelectedDate(null);
-                            }
-                          }} 
-                          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" 
-                          required 
-                        />
-                      </div>
+                      <div><label className="block text-sm text-slate-400 mb-1">Fecha</label><input type="date" value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''} onChange={e => setSelectedDate(new Date(e.target.value))} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required /></div>
                       <div><label className="block text-sm text-slate-400 mb-1">Hora</label><input type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required /></div>
                     </div>
                     <div><label className="block text-sm text-slate-400 mb-1">Motivo</label><textarea value={formData.motivo} onChange={e => setFormData({ ...formData, motivo: e.target.value })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Evaluación inicial" /></div>
@@ -672,6 +617,7 @@ export default function AgendaTurnosPage() {
                 </div>
               </>
             ) : (
+              /* FORMULARIO DE REGISTRO DE SESIÓN CLÍNICA CON SELECCIÓN DE PLAN */
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -686,6 +632,7 @@ export default function AgendaTurnosPage() {
                 {sessionStep === 'select' ? (
                   <div className="space-y-4">
                     <p className="text-slate-300">Este paciente tiene <strong>{activePlans.length}</strong> plan(es) de tratamiento activo(s) con este profesional. ¿A cuál pertenece esta sesión?</p>
+                    
                     {isCheckingPlans ? (
                       <div className="flex items-center justify-center py-8 gap-2 text-slate-400">
                         <FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Verificando planes...
@@ -704,6 +651,7 @@ export default function AgendaTurnosPage() {
                             </span>
                           </button>
                         ))}
+                        
                         <button onClick={() => { setSelectedPlanId('new'); setSessionStep('form'); }}
                           className="w-full text-left p-4 bg-slate-800/50 border-2 border-dashed border-slate-700 rounded-xl hover:border-sky-500 hover:bg-sky-500/5 transition flex items-center gap-3 text-slate-400 hover:text-sky-400">
                           <FontAwesomeIcon icon={faPlusCircle} className="w-5 h-5" />
