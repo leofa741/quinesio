@@ -51,7 +51,6 @@ export default function ReservarTurnoPage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ NUEVOS ESTADOS PARA DISPONIBILIDAD
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
@@ -70,12 +69,11 @@ export default function ReservarTurnoPage() {
     }
   }, [status, router]);
 
-  // ✅ CONSULTAR DISPONIBILIDAD CUANDO CAMBIA LA FECHA O EL PROFESIONAL
   useEffect(() => {
     const fetchDisponibilidad = async () => {
       if (selectedProf && selectedDate) {
         setLoadingSlots(true);
-        setSelectedTime(''); // Resetear hora seleccionada al cambiar fecha
+        setSelectedTime('');
         try {
           const res = await fetch(`/api/turnos/disponibilidad?profesionalId=${selectedProf._id}&fecha=${selectedDate}`);
           const data = await res.json();
@@ -106,12 +104,19 @@ export default function ReservarTurnoPage() {
 
   const handleReservar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.user?.id || !selectedProf || !selectedDate || !selectedTime) return;
+    if (!session?.user?.id || !selectedProf || !selectedDate || !selectedTime) {
+      toast.error('Faltan datos para completar la reserva');
+      return;
+    }
     setIsSubmitting(true);
 
-    const [hours, minutes] = selectedTime.split(':');
-    const fechaInicio = new Date(selectedDate);
-    fechaInicio.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    // ✅ CORRECCIÓN DE ZONA HORARIA:
+    // Parseamos manualmente para evitar que JavaScript interprete "YYYY-MM-DD" como UTC
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    
+    // Creamos la fecha en la zona horaria local del navegador del usuario
+    const fechaInicio = new Date(year, month - 1, day, hours, minutes, 0, 0);
     
     const fechaFin = new Date(fechaInicio);
     const duracion = selectedProf.honorarios?.duracionSesion || 60;
@@ -120,7 +125,7 @@ export default function ReservarTurnoPage() {
 
     const formData = new FormData();
     formData.append('pacienteId', session.user.id);
-    formData.append('profesionalId', selectedProf._id);
+    formData.append('profesionalId', selectedProf._id); // ✅ ID explícito y seguro del profesional seleccionado
     formData.append('fechaInicio', fechaInicio.toISOString());
     formData.append('fechaFin', fechaFin.toISOString());
     formData.append('duracionMinutos', duracion.toString());
@@ -150,7 +155,6 @@ export default function ReservarTurnoPage() {
     return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" /></div>;
   }
 
-  // Horarios base para mostrar los ocupados como deshabilitados (UX)
   const baseSlots = ['09:00', '10:00', '11:00', '12:00', '15:00', '16:00', '17:00', '18:00'];
 
   return (
@@ -197,7 +201,7 @@ export default function ReservarTurnoPage() {
           </div>
         )}
 
-        {/* PASO 2: Elegir Fecha y Hora (CON LÓGICA DE DISPONIBILIDAD) */}
+        {/* PASO 2: Elegir Fecha y Hora */}
         {step === 2 && selectedProf && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold mb-4">Elige fecha y hora con {selectedProf.name}</h2>
@@ -268,7 +272,7 @@ export default function ReservarTurnoPage() {
           </div>
         )}
 
-        {/* PASO 3: Confirmar (Igual que antes, pero ahora con los datos reales) */}
+        {/* PASO 3: Confirmar */}
         {step === 3 && selectedProf && (
           <form onSubmit={handleReservar} className="space-y-6">
             <h2 className="text-2xl font-bold mb-4">Confirma tu reserva</h2>
@@ -284,7 +288,10 @@ export default function ReservarTurnoPage() {
                 <FontAwesomeIcon icon={faCalendarCheck} className="text-sky-500 text-xl" />
                 <div>
                   <p className="text-sm text-slate-400">Fecha y Hora</p>
-                  <p className="font-semibold">{new Date(selectedDate).toLocaleDateString('es-AR')} a las {selectedTime} hs</p>
+                  <p className="font-semibold">
+                    {/* ✅ CORRECCIÓN DE VISUALIZACIÓN: Forzamos la interpretación como hora local */}
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-AR')} a las {selectedTime} hs
+                  </p>
                 </div>
               </div>
               <div>
