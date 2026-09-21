@@ -3,25 +3,37 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
 // ─────────────────────────────────────────────────────────────
-// 🔹 TIPOS PARA EL FORMULARIO DE INDUMENTARIA (SG TU LOOK)
+// 🔹 TIPOS PARA EL FORMULARIO DE CONTACTO (CENTRO KINESIOLÓGICO)
 // ─────────────────────────────────────────────────────────────
 interface ContactForm {
   name: string;
   contact: string; // Puede ser email o teléfono
-  interest: 'general' | 'talle' | 'stock' | 'asesoramiento' | 'mayorista';
+  interest: 'general' | 'turno' | 'cobertura' | 'rehabilitacion' | 'domiciliaria' | 'deportiva' | 'asesoramiento';
   message: string;
   subject?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
-// 🔹 MAPEOS LEGIBLES PARA EL EMAIL
+// 🔹 MAPEOS LEGIBLES PARA EL EMAIL (Contexto Kinesiológico)
 // ─────────────────────────────────────────────────────────────
 const interestLabels: Record<string, string> = {
   general: 'Consulta general',
-  talle: 'Dudas sobre talles y medidas',
-  stock: 'Consultar stock de una prenda',
-  asesoramiento: 'Asesoramiento de imagen personalizado',
-  mayorista: 'Compras mayoristas',
+  turno: 'Solicitar turno',
+  cobertura: 'Obras sociales y coberturas',
+  rehabilitacion: 'Rehabilitación y tratamientos',
+  domiciliaria: 'Atención domiciliaria',
+  deportiva: 'Kinesiología deportiva',
+  asesoramiento: 'Asesoramiento profesional',
+};
+
+const interestIcons: Record<string, string> = {
+  general: '💬',
+  turno: '📅',
+  cobertura: '🏥',
+  rehabilitacion: '🩺',
+  domiciliaria: '🏠',
+  deportiva: '⚽',
+  asesoramiento: '👨‍⚕️',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -32,7 +44,7 @@ export async function POST(req: Request) {
     const body: ContactForm = await req.json();
     const { name, contact, interest, message } = body;
 
-    // ✅ Validación de campos obligatorios (ahora usa 'contact' en lugar de 'email')
+    // ✅ Validación de campos obligatorios
     if (!name?.trim() || !contact?.trim() || !message?.trim() || !interest) {
       return NextResponse.json(
         { success: false, message: 'Por favor, completá los campos obligatorios.' },
@@ -59,12 +71,12 @@ export async function POST(req: Request) {
     const emailContent = buildEmailContent(body);
 
     const mailOptions = {
-      from: `"SG Tu Look" <${process.env.MAILER_EMAIL}>`,
+      from: `"Centro Kinesiológico" <${process.env.MAILER_EMAIL}>`,
       to: process.env.MAILER_EMAIL,
       cc: process.env.MAILER_CC ? process.env.MAILER_CC.split(',').map((e: string) => e.trim()) : undefined,
-      subject: `✨ Nueva consulta: ${interestLabels[interest]} - ${name}`,
+      subject: `🏥 Nueva consulta: ${interestLabels[interest]} - ${name}`,
       html: emailContent,
-      text: buildTextContent(body), // Fallback para clientes que no soportan HTML
+      text: buildTextContent(body),
     };
 
     await transporter.sendMail(mailOptions);
@@ -90,25 +102,39 @@ export async function POST(req: Request) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 🔹 PLANTILLA HTML PREMIUM PARA EL EMAIL
+// 🔹 PLANTILLA HTML PREMIUM PARA EL EMAIL (Diseño Clínico)
 // ─────────────────────────────────────────────────────────────
 function buildEmailContent(data: ContactForm): string {
   const { name, contact, interest, message } = data;
+  const icon = interestIcons[interest] || '📩';
   
   const styles = {
-    container: 'font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 0;',
-    header: 'background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;',
-    headerTitle: 'color: white; font-size: 24px; font-weight: bold; margin: 0 0 8px 0;',
-    headerSubtitle: 'color: rgba(255,255,255,0.9); font-size: 14px; margin: 0;',
-    body: 'background: #fafafa; padding: 24px; border-radius: 0 0 12px 12px;',
-    card: 'background: white; padding: 20px; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);',
-    label: 'color: #71717a; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;',
-    value: 'color: #18181b; font-size: 15px; font-weight: 500; margin: 0 0 12px 0;',
-    messageBox: 'background: #fdf2f8; padding: 16px; border-radius: 8px; border-left: 4px solid #f43f5e; margin: 16px 0;',
-    messageText: 'color: #3f3f46; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;',
-    footer: 'text-align: center; padding: 24px; color: #a1a1aa; font-size: 12px;',
-    badge: 'display: inline-block; background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;',
-    divider: 'height: 1px; background: linear-gradient(to right, transparent, #e4e4e7, transparent); margin: 20px 0;',
+    container: 'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 0; background: #f1f5f9;',
+    wrapper: 'padding: 24px 16px;',
+    header: 'background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); padding: 40px 24px; text-align: center; border-radius: 16px 16px 0 0; position: relative; overflow: hidden;',
+    headerOverlay: 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);',
+    headerIcon: 'display: inline-block; background: rgba(255,255,255,0.2); width: 64px; height: 64px; border-radius: 50%; line-height: 64px; font-size: 32px; margin-bottom: 16px;',
+    headerTitle: 'color: white; font-size: 26px; font-weight: 700; margin: 0 0 8px 0; letter-spacing: -0.02em;',
+    headerSubtitle: 'color: rgba(255,255,255,0.9); font-size: 14px; margin: 0; font-weight: 400;',
+    body: 'background: white; padding: 32px 28px; border-radius: 0 0 16px 16px; box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.1);',
+    alertBanner: 'background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #0ea5e9; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px;',
+    alertText: 'color: #0369a1; font-size: 13px; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;',
+    card: 'background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #e2e8f0;',
+    cardHeader: 'color: #0ea5e9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 12px 0; font-weight: 700;',
+    label: 'color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 4px 0; font-weight: 600;',
+    value: 'color: #0f172a; font-size: 16px; font-weight: 600; margin: 0 0 16px 0;',
+    valueLast: 'color: #0f172a; font-size: 16px; font-weight: 600; margin: 0;',
+    messageBox: 'background: #f0f9ff; padding: 20px; border-radius: 10px; border: 1px solid #bae6fd; margin: 20px 0;',
+    messageLabel: 'color: #0369a1; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px 0; font-weight: 700;',
+    messageText: 'color: #334155; font-size: 15px; line-height: 1.7; margin: 0; white-space: pre-wrap;',
+    footer: 'text-align: center; padding: 28px 24px; color: #64748b; font-size: 12px; background: white; border-top: 1px solid #e2e8f0; border-radius: 0 0 16px 16px;',
+    footerBrand: 'color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 12px 0;',
+    footerInfo: 'color: #64748b; font-size: 12px; margin: 4px 0;',
+    badge: 'display: inline-block; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; padding: 8px 18px; border-radius: 24px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);',
+    button: 'display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); margin-top: 8px;',
+    divider: 'height: 1px; background: linear-gradient(to right, transparent, #e2e8f0, transparent); margin: 24px 0;',
+    infoRow: 'display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #e2e8f0;',
+    infoRowLast: 'display: flex; justify-content: space-between; align-items: center; padding: 12px 0;',
   };
 
   return `
@@ -117,51 +143,94 @@ function buildEmailContent(data: ContactForm): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Nueva consulta - SG Tu Look</title>
+      <title>Nueva consulta - Centro Kinesiológico</title>
     </head>
-    <body style="${styles.container}">
+    <body style="margin: 0; padding: 0; background: #f1f5f9;">
       
-      <div style="${styles.header}">
-        <h1 style="${styles.headerTitle}">✨ Nueva Consulta</h1>
-        <p style="${styles.headerSubtitle}">SG Tu Look</p>
-      </div>
-
-      <div style="${styles.body}">
-        
-        <div style="text-align: center; margin-bottom: 24px;">
-          <span style="${styles.badge}">${interestLabels[interest] || interest}</span>
-        </div>
-
-        <div style="${styles.card}">
-          <p style="${styles.label}">Nombre completo</p>
-          <p style="${styles.value}">${name}</p>
+      <div style="${styles.container}">
+        <div style="${styles.wrapper}">
           
-          <p style="${styles.label}">Email o Teléfono de contacto</p>
-          <p style="${styles.value}">${contact}</p>
-        </div>
-
-        <div style="${styles.card}">
-          <p style="${styles.label}">Mensaje</p>
-          <div style="${styles.messageBox}">
-            <p style="${styles.messageText}">${message.replace(/\n/g, '<br>')}</p>
+          <!-- HEADER -->
+          <div style="${styles.header}">
+            <div style="${styles.headerOverlay}"></div>
+            <div style="position: relative; z-index: 1;">
+              <div style="${styles.headerIcon}">🏥</div>
+              <h1 style="${styles.headerTitle}">Nueva Consulta</h1>
+              <p style="${styles.headerSubtitle}">Centro Kinesiológico</p>
+            </div>
           </div>
+
+          <!-- BODY -->
+          <div style="${styles.body}">
+            
+            <!-- Alert Banner -->
+            <div style="${styles.alertBanner}">
+              <span style="font-size: 20px;">${icon}</span>
+              <p style="${styles.alertText}">Consulta de: ${interestLabels[interest] || interest}</p>
+            </div>
+
+            <!-- Datos del Paciente -->
+            <div style="${styles.card}">
+              <p style="${styles.cardHeader}">Datos del Paciente</p>
+              
+              <div style="${styles.infoRow}">
+                <p style="${styles.label}">Nombre completo</p>
+                <p style="color: #0f172a; font-size: 15px; font-weight: 600; margin: 0;">${name}</p>
+              </div>
+              
+              <div style="${styles.infoRowLast}">
+                <p style="${styles.label}">Contacto</p>
+                <p style="color: #0f172a; font-size: 15px; font-weight: 600; margin: 0;">${contact}</p>
+              </div>
+            </div>
+
+            <!-- Mensaje -->
+            <div style="${styles.messageBox}">
+              <p style="${styles.messageLabel}">📝 Mensaje del Paciente</p>
+              <p style="${styles.messageText}">${message.replace(/\n/g, '<br>')}</p>
+            </div>
+
+            <!-- Info adicional -->
+            <div style="background: #f8fafc; padding: 16px 20px; border-radius: 10px; margin: 20px 0; border: 1px solid #e2e8f0;">
+              <p style="color: #475569; font-size: 13px; line-height: 1.6; margin: 0;">
+                <strong style="color: #0f172a;">Tipo de consulta:</strong> ${icon} ${interestLabels[interest] || interest}<br>
+                <strong style="color: #0f172a;">Fecha de recepción:</strong> ${new Date().toLocaleString('es-AR', { 
+                  dateStyle: 'full', 
+                  timeStyle: 'short' 
+                })}
+              </p>
+            </div>
+
+            <div style="${styles.divider}"></div>
+
+            <!-- Botón Responder -->
+            <div style="text-align: center; margin-top: 8px;">
+              ${contact.includes('@') ? `
+                <a href="mailto:${contact}?subject=Re: Consulta Centro Kinesiológico - ${name}" 
+                   style="${styles.button}">
+                  ✉️ Responder a ${name}
+                </a>
+              ` : `
+                <a href="tel:${contact.replace(/\D/g, '')}" 
+                   style="${styles.button}">
+                  📞 Llamar a ${name}
+                </a>
+              `}
+            </div>
+
+          </div>
+
+          <!-- FOOTER -->
+          <div style="${styles.footer}">
+            <p style="${styles.footerBrand}">🏥 Centro Kinesiológico</p>
+            <p style="${styles.footerInfo}">📧 ${process.env.MAILER_EMAIL}</p>
+            <p style="${styles.footerInfo}">Este mensaje fue enviado desde el formulario de contacto oficial.</p>
+            <p style="${styles.footerInfo}; color: #94a3b8; font-size: 11px; margin-top: 12px;">
+              © ${new Date().getFullYear()} Todos los derechos reservados
+            </p>
+          </div>
+
         </div>
-
-        <div style="${styles.divider}"></div>
-
-        <div style="text-align: center; margin-top: 24px;">
-          <a href="mailto:${contact.includes('@') ? contact : ''}?subject=Re: Consulta SG Tu Look" 
-             style="display: inline-block; background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; padding: 12px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
-            Responder a ${name}
-          </a>
-        </div>
-
-      </div>
-
-      <div style="${styles.footer}">
-        <p style="margin: 0 0 8px 0;"><strong>SG Tu Look</strong></p>
-        <p style="margin: 0 0 4px 0;">📧 ${process.env.MAILER_EMAIL}</p>
-        <p style="margin: 0;">Este mensaje fue enviado desde el formulario de contacto de <strong>SG Tu Look</strong>.</p>
       </div>
 
     </body>
@@ -176,20 +245,21 @@ function buildTextContent(data: ContactForm): string {
   const { name, contact, interest, message } = data;
   
   return `
-NUEVA CONSULTA - SG TU LOOK
+NUEVA CONSULTA - CENTRO KINESIOLÓGICO
 ========================================================
 
-INTERÉS: ${interestLabels[interest] || interest}
+${interestIcons[interest] || '📩'} TIPO DE CONSULTA: ${interestLabels[interest] || interest}
 
-CONTACTO:
+DATOS DEL PACIENTE:
 • Nombre: ${name}
-• Email/Teléfono: ${contact}
+• Contacto: ${contact}
 
 MENSAJE:
 ${message}
 
----
+--------------------------------------------------------
+Recibido: ${new Date().toLocaleString('es-AR')}
 Responder a: ${contact}
-Enviado desde: Formulario web SG Tu Look
+Enviado desde: Formulario web - Centro Kinesiológico
   `.trim();
 }
