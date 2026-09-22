@@ -16,6 +16,7 @@ import {
   faNotesMedical, faImage, faChartLine, faPlusCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { FaArrowLeft } from 'react-icons/fa';
+import PlantillasClinicas from '@/app/components/plantillaclinica/PlantillasClinicas';
 
 interface Profesional {
   _id: string;
@@ -492,8 +493,8 @@ export default function AgendaTurnosPage() {
               key={filter.id}
               onClick={() => setStatusFilter(filter.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${statusFilter === filter.id
-                  ? 'bg-slate-800 border-sky-500 text-white shadow-lg shadow-sky-900/10'
-                  : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                ? 'bg-slate-800 border-sky-500 text-white shadow-lg shadow-sky-900/10'
+                : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 }`}
             >
               {filter.id !== 'todos' && <span className={`w-2.5 h-2.5 rounded-full ${filter.color}`}></span>}
@@ -707,6 +708,17 @@ export default function AgendaTurnosPage() {
                   <button onClick={handleUpdateTurnoDetails} disabled={isSavingNotes} className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50">
                     {isSavingNotes ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><FontAwesomeIcon icon={faSave} /> Guardar Cambios</>}
                   </button>
+                  {/* ✅ NUEVO BOTÓN: Ver Evolución del Paciente (Siempre visible si hay paciente) */}
+                  {selectedTurno.pacienteId && (
+                    <button
+                      onClick={() => window.open(`/admin/evolucion/${selectedTurno.pacienteId}`, '_blank')}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30"
+                    >
+                      <FontAwesomeIcon icon={faChartLine} /> Ver Evolución del Paciente
+                    </button>
+                  )}
+
+                  {/* Botón de Registrar Sesión (solo si el turno está confirmado o pendiente) */}
                   {(selectedTurno.estado === 'confirmado' || selectedTurno.estado === 'pendiente') && (
                     <button onClick={() => { setShowClinicalForm(true); setSessionStep('select'); }}
                       className="px-4 py-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-sky-900/30">
@@ -768,6 +780,17 @@ export default function AgendaTurnosPage() {
                         <input placeholder="Objetivo del tratamiento (Opcional)" value={clinicalFormData.objetivo} onChange={e => setClinicalFormData({ ...clinicalFormData, objetivo: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
                       </div>
                     )}
+
+                    {/* ✅ AQUÍ ESTÁ LA MAGIA: Componente de Plantillas */}
+                    <PlantillasClinicas onSelect={(plantilla) => {
+                      setClinicalFormData({
+                        ...clinicalFormData,
+                        diagnostico: plantilla.diagnostico,
+                        tecnicasAplicadas: plantilla.tecnicas,
+                        proximosPasos: plantilla.ejercicios
+                      });
+                      toast.info(`📋 Plantilla "${plantilla.nombre}" aplicada`);
+                    }} />
 
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-sky-400">{selectedPlanId === 'new' ? '2. Registro de la Primera Sesión' : 'Registro de la Sesión de Hoy'}</h3>

@@ -129,14 +129,6 @@ const modules = [
     roles: ['admin', 'profesionales'],
   },
   {
-    id: 'evolucion',
-    title: 'Evolución y Métricas',
-    description: 'Gráficos de progreso del dolor (EVA), rango de movimiento y objetivos.',
-    icon: <FaChartLine className="text-2xl text-zinc-400" />,
-    href: '/admin/evolucion',
-    roles: ['admin', 'profesionales'],
-  },
-  {
     id: 'bitacora',
     title: 'Bitacota de ingresos al sistema',
     description: 'Bitacota de ingresos al sistema .',
