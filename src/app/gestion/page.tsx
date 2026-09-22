@@ -129,6 +129,14 @@ const modules = [
     roles: ['admin', 'profesionales'],
   },
   {
+    id: 'historial-turnos',
+    title: 'Historial de Turnos',
+    description: 'Consulta y filtra el historial completo de turnos con estadísticas.',
+    icon: <FaHistory className="text-2xl text-zinc-400" />,
+    href: '/admin/historial-turnos',
+    roles: ['admin', 'profesionales', 'administrativos'],
+  },
+  {
     id: 'bitacora',
     title: 'Bitacota de ingresos al sistema',
     description: 'Bitacota de ingresos al sistema .',
