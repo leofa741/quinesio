@@ -97,7 +97,7 @@ const modules = [
   {
     id: 'pagos',
     title: 'Gestión de Pagos',
-    description: 'Registrar pagos, métodos y calcular deudas por paciente.',
+    description: 'Registrar pagos, métodos y calcular deudas por paciente, calcular honorarios por profesional.',
     icon: <FaMoneyBillWave className="text-2xl text-zinc-400" />,
     href: '/admin/pagos',
     roles: ['admin', 'administrativos'],
