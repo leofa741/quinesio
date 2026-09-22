@@ -128,14 +128,6 @@ const modules = [
     roles: ['admin', 'profesionales'],
   },
   {
-    id: 'finanzas',
-    title: 'Caja y Pagos',
-    description: 'Registro de cobros, deudas de pacientes y cierre de caja diario por profesional.',
-    icon: <FaCashRegister className="text-2xl text-zinc-400" />, // o FaMoneyBillWave
-    href: '/admin/finanzas',
-    roles: ['admin', 'administrativos'], // El profesional solo ve sus propios números si se desea
-  },
-  {
     id: 'bitacora',
     title: 'Bitacota de ingresos al sistema',
     description: 'Bitacota de ingresos al sistema .',
