@@ -10,6 +10,7 @@ import {
   faCalendarAlt, faNotesMedical, faSpinner, faCheckCircle, 
   faSearch, faTimes, faList, faEye
 } from '@fortawesome/free-solid-svg-icons';
+import { FaArrowLeft } from 'react-icons/fa';
 
 interface EjercicioLibreria {
   _id: string;
@@ -208,7 +209,14 @@ export default function PlanesEjerciciosPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-5xl mt-40 mx-auto">
+      <div className="max-w-5xl  mx-auto">
+            <button 
+                onClick={() => router.push('/gestion')} 
+                className="inline-flex  mt-40 items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+              >
+                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+                Volver al Panel Principal
+              </button>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">

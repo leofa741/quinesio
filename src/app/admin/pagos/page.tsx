@@ -9,6 +9,7 @@ import {
   faMoneyBillWave, faSpinner, faCheckCircle, faHourglassHalf, 
   faUserMd, faFilter, faEdit, faSave, faTimes
 } from '@fortawesome/free-solid-svg-icons';
+import { FaArrowLeft } from 'react-icons/fa';
 
 export default function PagosPage() {
   const { data: session, status } = useSession();
@@ -121,6 +122,13 @@ export default function PagosPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mt-40 mx-auto">
+            <button 
+                onClick={() => router.push('/gestion')} 
+                className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+              >
+                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+                Volver al Panel Principal
+              </button>
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">

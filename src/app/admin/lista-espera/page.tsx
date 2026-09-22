@@ -11,6 +11,7 @@ import {
   faToggleOn, faToggleOff, faSpinner, faSearch, faUserClock 
 } from '@fortawesome/free-solid-svg-icons';
 import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
+import { FaArrowLeft } from 'react-icons/fa';
 
 interface Alerta {
   _id: string;
@@ -129,6 +130,13 @@ export default function ListaEsperaPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mt-40 mx-auto">
+            <button 
+                onClick={() => router.push('/gestion')} 
+                className="inline-flex  items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+              >
+                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+                Volver al Panel Principal
+              </button>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
