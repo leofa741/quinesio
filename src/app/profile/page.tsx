@@ -78,9 +78,10 @@ export default function ProfilePage() {
       
 
       <section className="max-w-2xl mx-auto mt-8 p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-        <header className="py-8 mt-40 bg-red-800 text-white text-center shadow-lg">
+        <header className="py-8 mt-20 bg text-white text-center shadow-lg">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-wide">Mi Perfil</h1>
       </header>
+         <br />
         <div className="flex flex-col items-center space-y-6">
           {/* Avatar */}
           {userData?.img ? (
