@@ -71,7 +71,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
-      <header className="py-8 bg-red-800 text-white text-center shadow-lg">
+      <header className="py-8 mt-40 bg-red-800 text-white text-center shadow-lg">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-wide">Mi Perfil</h1>
       </header>
 
