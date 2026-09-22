@@ -25,7 +25,8 @@ import {
   FaUserInjured,
   FaUserClock,
   FaCashRegister,
-  FaDumbbell
+  FaDumbbell,
+  FaFilePrescription
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
@@ -111,12 +112,20 @@ const modules = [
     href: '/admin/reportes',
     roles: ['admin', 'administrativos'],
   },
-    {
+  {
     id: 'ejercicios',
     title: 'Planes de Ejercicios',
     description: 'Asigna rutinas domiciliarias con videos y realiza seguimiento de cumplimiento.',
     icon: <FaDumbbell className="text-2xl text-zinc-400" />, // o FaRunning
     href: '/admin/ejercicios',
+    roles: ['admin', 'profesionales'],
+  },
+  {
+    id: 'prescripciones',
+    title: 'Prescripciones Kinesiológicas',
+    description: 'Emití prescripciones de tratamiento con código de verificación único.',
+    icon: <FaFilePrescription className="text-2xl text-zinc-400" />,
+    href: '/admin/prescripciones',
     roles: ['admin', 'profesionales'],
   },
   {

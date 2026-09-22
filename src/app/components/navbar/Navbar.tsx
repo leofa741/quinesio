@@ -347,6 +347,7 @@ export default function Navbar() {
 
               <NavLink href="/contact" scrolled={scrolled}>Contacto</NavLink>
               <NavLink href="/about" scrolled={scrolled}>Nosotros</NavLink>
+              <NavLink href="/verificar" scrolled={scrolled}>Verificación de Prescripciones</NavLink>
             </div>
 
             {/* ───────── RIGHT ACTIONS ───────── */}
@@ -365,53 +366,53 @@ export default function Navbar() {
                     </div>
                   </Link>
 
-                
-                {(role === 'pacientes') && (
-                  <>
-                  <Link
-                    href="/turnos"
-                    className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                      } text-white hover:shadow-xl hover:shadow-sky-900/40`}  
 
-                  >
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Turnos
-                    </span>
-                    <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  </Link>
+                  {(role === 'pacientes') && (
+                    <>
+                      <Link
+                        href="/turnos"
+                        className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
+                          } text-white hover:shadow-xl hover:shadow-sky-900/40`}
 
-                    <Link
-                    href="/profile/notificaciones"
-                    className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                      } text-white hover:shadow-xl hover:shadow-sky-900/40`}  
+                      >
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Turnos
+                        </span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      </Link>
 
-                  >
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Alertas
-                    </span>
-                    <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  </Link>
+                      <Link
+                        href="/profile/notificaciones"
+                        className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
+                          } text-white hover:shadow-xl hover:shadow-sky-900/40`}
 
-                     <Link
-                    href="/profile/mis-ejercicios"
-                    className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                      } text-white hover:shadow-xl hover:shadow-sky-900/40`}  
+                      >
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Alertas
+                        </span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      </Link>
 
-                  >
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Ejercicios
-                    </span>
-                    <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  </Link>
+                      <Link
+                        href="/profile/mis-ejercicios"
+                        className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
+                          } text-white hover:shadow-xl hover:shadow-sky-900/40`}
+
+                      >
+                        <span className="relative z-10 flex items-center gap-1.5">
+                          <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Ejercicios
+                        </span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      </Link>
 
 
 
-                  </>
+                    </>
 
-                
-                )}  
 
-                
+                  )}
+
+
 
 
 
@@ -569,8 +570,9 @@ export default function Navbar() {
 
                 <MobileNavLink href="/contacto" onClick={closeMenu} index={1}>Contacto</MobileNavLink>
                 <MobileNavLink href="/nosotros" onClick={closeMenu} index={2}>Nosotros</MobileNavLink>
+                <MobileNavLink href="/verificar" onClick={closeMenu} index={2}>Verificación de Prescripciones</MobileNavLink>
 
-                 
+
 
                 {session ? (
                   <div className="pt-8 mt-6 border-t border-white/10">
@@ -592,38 +594,38 @@ export default function Navbar() {
                     {/* rol paciente */}
                     {role === 'pacientes' && (
                       <>
-                      <Link
-                        href="/turnos"
-                        onClick={closeMenu}
-                        className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                      >
-                        <span className="relative z-10 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUserMd} /> Mis Turnos
-                        </span>
-                        <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                      </Link>
+                        <Link
+                          href="/turnos"
+                          onClick={closeMenu}
+                          className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
+                        >
+                          <span className="relative z-10 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faUserMd} /> Mis Turnos
+                          </span>
+                          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        </Link>
 
-                      <Link
-                        href="/perfil/notificaciones"
-                        onClick={closeMenu}
-                        className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                      >
-                        <span className="relative z-10 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faBell} /> Alertas
-                        </span>
-                        <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                      </Link>
+                        <Link
+                          href="/perfil/notificaciones"
+                          onClick={closeMenu}
+                          className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
+                        >
+                          <span className="relative z-10 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faBell} /> Alertas
+                          </span>
+                          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        </Link>
 
-                      <Link
-                        href="/perfil/mis-ejercicios"
-                        onClick={closeMenu}
-                        className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                      >
-                        <span className="relative z-10 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faDumbbell} /> Mis Ejercicios
-                        </span>
-                        <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                      </Link>
+                        <Link
+                          href="/perfil/mis-ejercicios"
+                          onClick={closeMenu}
+                          className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
+                        >
+                          <span className="relative z-10 flex items-center gap-2">
+                            <FontAwesomeIcon icon={faDumbbell} /> Mis Ejercicios
+                          </span>
+                          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        </Link>
                       </>
                     )}
 
