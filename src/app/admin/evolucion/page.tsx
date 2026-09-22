@@ -24,10 +24,10 @@ export default function EvolucionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4  mt-40 md:p-8 flex flex-col">
       {/* Botón para volver */}
       <button 
-        onClick={() => router.push('/admin')} 
+        onClick={() => router.push('/gestion')} 
         className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
       >
         <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
