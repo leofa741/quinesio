@@ -75,7 +75,7 @@ export default function EvolucionPage() {
 
         {/* Botón de acción principal */}
         <button 
-          onClick={() => router.push('/admin')}
+          onClick={() => router.push('/gestion')}
           className="px-8 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-500/20 hover:-translate-y-0.5 flex items-center gap-2"
         >
           <FaArrowLeft /> Volver al Dashboard
