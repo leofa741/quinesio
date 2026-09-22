@@ -65,8 +65,8 @@ export default function TurnosPage() {
       {/* ========================================== */}
       {/* HERO SECTION CON ACCESO RÁPIDO             */}
       {/* ========================================== */}
-      <div className="relative overflow-hidden mt-40 bg-gradient-to-b from-sky-950/40 to-slate-950 border-b border-slate-800">
-        <div className="max-w-5xl mx-auto px-4 py-16 md:py-24 text-center relative z-10">
+      <div className="relative overflow-hidden  bg-gradient-to-b from-sky-950/40 to-slate-950 border-b border-slate-800">
+        <div className="max-w-5xl mx-auto px-4 mt-40 py-16 md:py-24 text-center relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
