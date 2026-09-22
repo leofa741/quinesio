@@ -5,30 +5,31 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faFilePrescription, faPlus, faSearch, faSpinner, 
+import {
+  faFilePrescription, faPlus, faSearch, faSpinner,
   faCheckCircle, faTimes, faEye, faBan, faCopy,
   faCalendarAlt, faExclamationTriangle, faUserPlus, faPrint
 } from '@fortawesome/free-solid-svg-icons';
+import { FaArrowLeft } from 'react-icons/fa';
 
 export default function PrescripcionesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const [prescripciones, setPrescripciones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState<any>(null);
-  
+
   const [pacientesList, setPacientesList] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  
+
   const [showCreatePatient, setShowCreatePatient] = useState(false);
   const [newPatient, setNewPatient] = useState({ name: '', lastName: '', email: '', phone: '' });
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     pacienteId: '',
     diagnostico: '',
@@ -90,13 +91,13 @@ export default function PrescripcionesPage() {
       const res = await fetch('/api/pacientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ 
-          name: newPatient.name, 
-          lastName: newPatient.lastName, 
-          email: newPatient.email, 
-          phone: newPatient.phone, 
-          role: 'pacientes', 
-          activo: true 
+        body: JSON.stringify({
+          name: newPatient.name,
+          lastName: newPatient.lastName,
+          email: newPatient.email,
+          phone: newPatient.phone,
+          role: 'pacientes',
+          activo: true
         }),
       });
       const data = await res.json();
@@ -266,6 +267,13 @@ export default function PrescripcionesPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-6xl mt-40 mx-auto">
+        <button
+          onClick={() => router.push('/gestion')}
+          className="inline-flex  items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+        >
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+          Volver al Panel Principal
+        </button>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -282,7 +290,7 @@ export default function PrescripcionesPage() {
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
           <FontAwesomeIcon icon={faExclamationTriangle} className="text-amber-400 mt-0.5 flex-shrink-0" />
           <p className="text-amber-200 text-sm">
-            <strong>Aviso legal:</strong> Estas prescripciones son de carácter kinesiológico y NO reemplazan recetas médicas. 
+            <strong>Aviso legal:</strong> Estas prescripciones son de carácter kinesiológico y NO reemplazan recetas médicas.
             Su validez está sujeta a la normativa vigente del Colegio de Kinesiólogos de su jurisdicción.
           </p>
         </div>
@@ -299,19 +307,17 @@ export default function PrescripcionesPage() {
               const estaVencida = p.estado === 'activa' && new Date(p.fechaVencimiento) < new Date();
               const estadoReal = estaVencida ? 'vencida' : p.estado;
               return (
-                <div key={p._id} className={`bg-slate-900 border rounded-xl p-5 transition-all hover:border-sky-500/30 ${
-                  estadoReal === 'anulada' ? 'border-red-800/50 opacity-60' : 
-                  estadoReal === 'vencida' ? 'border-amber-800/50' : 'border-slate-800'
-                }`}>
+                <div key={p._id} className={`bg-slate-900 border rounded-xl p-5 transition-all hover:border-sky-500/30 ${estadoReal === 'anulada' ? 'border-red-800/50 opacity-60' :
+                    estadoReal === 'vencida' ? 'border-amber-800/50' : 'border-slate-800'
+                  }`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-bold text-white">{p.paciente?.name} {p.paciente?.lastName}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          estadoReal === 'activa' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                          estadoReal === 'vencida' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                          'bg-red-500/20 text-red-400 border border-red-500/30'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${estadoReal === 'activa' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                            estadoReal === 'vencida' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                              'bg-red-500/20 text-red-400 border border-red-500/30'
+                          }`}>
                           {estadoReal}
                         </span>
                       </div>
@@ -346,7 +352,7 @@ export default function PrescripcionesPage() {
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <FontAwesomeIcon icon={faFilePrescription} className="text-sky-500" /> 
+                <FontAwesomeIcon icon={faFilePrescription} className="text-sky-500" />
                 Emitir Prescripción Kinesiológica
               </h2>
               <button onClick={() => { setShowForm(false); setSearchQuery(''); setPacientesList([]); setShowCreatePatient(false); }} className="text-slate-400 hover:text-white">
@@ -369,7 +375,7 @@ export default function PrescripcionesPage() {
                           <div className="p-4 text-center text-sm text-slate-400 flex items-center justify-center gap-2"><FontAwesomeIcon icon={faSpinner} className="animate-spin" /> Buscando...</div>
                         ) : pacientesList.length > 0 ? (
                           pacientesList.map((p: any) => (
-                            <button key={p._id} type="button" onClick={() => { setFormData({...formData, pacienteId: p._id}); setSearchQuery(`${p.name} ${p.lastName}`); setPacientesList([]); }}
+                            <button key={p._id} type="button" onClick={() => { setFormData({ ...formData, pacienteId: p._id }); setSearchQuery(`${p.name} ${p.lastName}`); setPacientesList([]); }}
                               className={`w-full text-left px-4 py-3 hover:bg-sky-600/20 transition border-b border-slate-700/50 last:border-0 ${formData.pacienteId === p._id ? 'bg-sky-600/30 text-sky-400' : 'text-slate-300'}`}>
                               <div><span className="font-medium">{p.name} {p.lastName}</span>{p.email && <span className="block text-xs text-slate-500">{p.email}</span>}</div>
                             </button>
@@ -385,7 +391,7 @@ export default function PrescripcionesPage() {
                           <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 flex-shrink-0" />
                           <span className="text-sm text-emerald-200 truncate">Paciente: <strong>{searchQuery}</strong></span>
                         </div>
-                        <button type="button" onClick={() => { setFormData({...formData, pacienteId: ''}); setSearchQuery(''); }} className="flex-shrink-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded transition" title="Cambiar paciente">
+                        <button type="button" onClick={() => { setFormData({ ...formData, pacienteId: '' }); setSearchQuery(''); }} className="flex-shrink-0 text-slate-400 hover:text-red-400 hover:bg-red-500/10 p-1.5 rounded transition" title="Cambiar paciente">
                           <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                         </button>
                       </div>
@@ -417,28 +423,28 @@ export default function PrescripcionesPage() {
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Diagnóstico Kinesiológico *</label>
-                <input type="text" value={formData.diagnostico} onChange={e => setFormData({...formData, diagnostico: e.target.value})} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" placeholder="Ej: Lumbalgia mecánica, Contractura cervical..." required />
+                <input type="text" value={formData.diagnostico} onChange={e => setFormData({ ...formData, diagnostico: e.target.value })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" placeholder="Ej: Lumbalgia mecánica, Contractura cervical..." required />
               </div>
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Prescripción de Tratamiento *</label>
-                <textarea value={formData.prescripcion} onChange={e => setFormData({...formData, prescripcion: e.target.value})} rows={4} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" placeholder="Ej: 10 sesiones de kinesiología motriz, 2 veces por semana. Incluye electroterapia, ejercicios de estabilización lumbar y estiramientos." required />
+                <textarea value={formData.prescripcion} onChange={e => setFormData({ ...formData, prescripcion: e.target.value })} rows={4} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" placeholder="Ej: 10 sesiones de kinesiología motriz, 2 veces por semana. Incluye electroterapia, ejercicios de estabilización lumbar y estiramientos." required />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Indicaciones</label>
-                  <textarea value={formData.indicaciones} onChange={e => setFormData({...formData, indicaciones: e.target.value})} rows={2} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" placeholder="Ej: Aplicar calor local antes de la sesión." />
+                  <textarea value={formData.indicaciones} onChange={e => setFormData({ ...formData, indicaciones: e.target.value })} rows={2} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" placeholder="Ej: Aplicar calor local antes de la sesión." />
                 </div>
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Contraindicaciones</label>
-                  <textarea value={formData.contraindicaciones} onChange={e => setFormData({...formData, contraindicaciones: e.target.value})} rows={2} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" placeholder="Ej: No realizar ejercicios de alto impacto." />
+                  <textarea value={formData.contraindicaciones} onChange={e => setFormData({ ...formData, contraindicaciones: e.target.value })} rows={2} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" placeholder="Ej: No realizar ejercicios de alto impacto." />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Validez (días)</label>
-                <select value={formData.diasValidez} onChange={e => setFormData({...formData, diasValidez: Number(e.target.value)})} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none">
+                <select value={formData.diasValidez} onChange={e => setFormData({ ...formData, diasValidez: Number(e.target.value) })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none">
                   <option value={15}>15 días</option>
                   <option value={30}>30 días</option>
                   <option value={60}>60 días</option>
@@ -462,7 +468,7 @@ export default function PrescripcionesPage() {
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <FontAwesomeIcon icon={faFilePrescription} className="text-sky-500" /> 
+                <FontAwesomeIcon icon={faFilePrescription} className="text-sky-500" />
                 Detalle de Prescripción
               </h2>
               <button onClick={() => setShowDetail(null)} className="text-slate-400 hover:text-white">
