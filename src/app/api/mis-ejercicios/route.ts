@@ -4,6 +4,10 @@ import { authOptions } from '@/app/lib/auth';
 import connectDB from '@/app/lib/mongoose';
 import PlanEjercicios from '@/app/models/PlanEjercicios';
 
+// ✅ IMPORTANTE: Importar el modelo Ejercicio para que Mongoose lo registre
+// antes de hacer el populate, aunque no se use directamente aquí.
+import '@/app/models/Ejercicio';
+
 connectDB();
 
 export async function GET() {
@@ -24,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, planes });
   } catch (error) {
-    console.error('Error al obtener mis ejercicios:', error);
+    console.error('❌ Error al obtener mis ejercicios:', error);
     return NextResponse.json({ message: 'Error del servidor' }, { status: 500 });
   }
 }
