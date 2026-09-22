@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faDumbbell, faPlus, faTrash, faUserInjured, 
   faCalendarAlt, faNotesMedical, faSpinner, faCheckCircle, 
-  faSearch, faTimes, faList
+  faSearch, faTimes, faList, faEye
 } from '@fortawesome/free-solid-svg-icons';
 
 interface EjercicioLibreria {
@@ -31,12 +31,16 @@ export default function PlanesEjerciciosPage() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const [showForm, setShowForm] = useState(false);
-  const [showLibraryForm, setShowLibraryForm] = useState(false); // ✅ Nuevo estado para el modal de librería
+  const [showLibraryForm, setShowLibraryForm] = useState(false);
   
   const [ejerciciosLibreria, setEjerciciosLibreria] = useState<EjercicioLibreria[]>([]);
   const [pacientesList, setPacientesList] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  
+  // ✅ Nuevo estado para la lista de planes ya asignados
+  const [assignedPlans, setAssignedPlans] = useState<any[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
   
   const [formData, setFormData] = useState({
     pacienteId: '',
@@ -46,7 +50,6 @@ export default function PlanesEjerciciosPage() {
     ejercicios: [] as EjercicioEnPlan[]
   });
 
-  // ✅ Estado para el formulario de nueva librería
   const [newExercise, setNewExercise] = useState({ nombre: '', categoria: '', videoUrl: '', descripcion: '' });
   const [savingExercise, setSavingExercise] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,6 +57,7 @@ export default function PlanesEjerciciosPage() {
   useEffect(() => {
     if (status === 'authenticated') {
       fetchEjerciciosLibreria();
+      fetchAssignedPlans(); // ✅ Cargar los planes al entrar
     }
   }, [status]);
 
@@ -64,6 +68,22 @@ export default function PlanesEjerciciosPage() {
       if (data.success) setEjerciciosLibreria(data.ejercicios);
     } catch (error) {
       console.error('Error cargando ejercicios:', error);
+    }
+  };
+
+  // ✅ Función para obtener los planes asignados por este profesional
+  const fetchAssignedPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const res = await fetch('/api/planes-ejercicios');
+      const data = await res.json();
+      if (data.success) {
+        setAssignedPlans(data.planes || []);
+      }
+    } catch (error) {
+      console.error('Error cargando planes asignados:', error);
+    } finally {
+      setLoadingPlans(false);
     }
   };
 
@@ -102,7 +122,6 @@ export default function PlanesEjerciciosPage() {
     searchTimeoutRef.current = setTimeout(() => fetchPacientesList(value), 400);
   };
 
-  // ✅ Función para guardar un ejercicio en la librería
   const handleAddExerciseToLibrary = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newExercise.nombre || !newExercise.categoria) {
@@ -120,7 +139,7 @@ export default function PlanesEjerciciosPage() {
       if (res.ok) {
         toast.success('✅ Ejercicio agregado a la librería');
         setNewExercise({ nombre: '', categoria: '', videoUrl: '', descripcion: '' });
-        fetchEjerciciosLibreria(); // Recargar la lista para que aparezca en el select
+        fetchEjerciciosLibreria();
         setShowLibraryForm(false);
       } else {
         toast.error(data.message || 'Error al guardar');
@@ -174,6 +193,7 @@ export default function PlanesEjerciciosPage() {
         setShowForm(false);
         setFormData({ pacienteId: '', fechaInicio: new Date().toISOString().split('T')[0], fechaFin: '', notasGenerales: '', ejercicios: [] });
         setSearchQuery('');
+        fetchAssignedPlans(); // ✅ Recargar la lista para mostrar el nuevo plan
       } else {
         toast.error(data.message || 'Error al guardar');
       }
@@ -213,11 +233,75 @@ export default function PlanesEjerciciosPage() {
           </div>
         </div>
 
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
-          <FontAwesomeIcon icon={faDumbbell} className="w-12 h-12 text-slate-600 mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-2">Gestión de Planes</h3>
-          <p className="text-slate-400 mb-6">Carga ejercicios en la librería y crea un nuevo plan para comenzar.</p>
-        </div>
+        {/* ✅ LISTA DE PLANES ASIGNADOS (Reemplaza el placeholder vacío) */}
+        {loadingPlans ? (
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+            <FontAwesomeIcon icon={faSpinner} className="w-8 h-8 animate-spin text-sky-500 mb-4" />
+            <p className="text-slate-400">Cargando planes asignados...</p>
+          </div>
+        ) : assignedPlans.length === 0 ? (
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
+            <FontAwesomeIcon icon={faDumbbell} className="w-12 h-12 text-slate-600 mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">Aún no hay planes asignados</h3>
+            <p className="text-slate-400 mb-6">Carga ejercicios en la librería y crea un nuevo plan para comenzar.</p>
+            <button 
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium transition inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faPlus} /> Crear Primer Plan
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {assignedPlans.map((plan: any) => (
+              <div key={plan._id} className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-sky-500/30 transition-all">
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 bg-sky-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <FontAwesomeIcon icon={faDumbbell} className="text-sky-400 text-xl" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-white text-lg truncate">
+                          Plan para {plan.paciente?.name} {plan.paciente?.lastName}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-slate-400 mt-1 flex-wrap">
+                          <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
+                          <span>Asignado el {new Date(plan.createdAt).toLocaleDateString('es-AR')}</span>
+                          <span className="text-slate-600">•</span>
+                          <span>{plan.ejercicios?.length || 0} ejercicio{(plan.ejercicios?.length || 0) !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/30">
+                        Activo
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Detalles rápidos del plan */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs mt-4">
+                    <div className="bg-slate-800/50 rounded-lg p-2.5">
+                      <p className="text-slate-500 mb-0.5">Paciente</p>
+                      <p className="text-white font-medium truncate">{plan.paciente?.name} {plan.paciente?.lastName}</p>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-2.5">
+                      <p className="text-slate-500 mb-0.5">Inicio</p>
+                      <p className="text-white font-medium">{new Date(plan.fechaInicio).toLocaleDateString('es-AR')}</p>
+                    </div>
+                    {plan.fechaFin && (
+                      <div className="bg-slate-800/50 rounded-lg p-2.5">
+                        <p className="text-slate-500 mb-0.5">Vigencia</p>
+                        <p className="text-white font-medium">{new Date(plan.fechaFin).toLocaleDateString('es-AR')}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ✅ MODAL PARA AGREGAR EJERCICIOS A LA LIBRERÍA */}
@@ -290,7 +374,7 @@ export default function PlanesEjerciciosPage() {
         </div>
       )}
 
-      {/* MODAL DE CREACIÓN DE PLAN (Igual que antes, pero ahora el select tendrá datos) */}
+      {/* MODAL DE CREACIÓN DE PLAN */}
       {showForm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
