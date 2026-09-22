@@ -10,11 +10,12 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle, 
-  faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faUserMd, 
+import {
+  faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle,
+  faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faUserMd,
   faNotesMedical, faImage, faChartLine, faPlusCircle
 } from '@fortawesome/free-solid-svg-icons';
+import { FaArrowLeft } from 'react-icons/fa';
 
 interface Profesional {
   _id: string;
@@ -44,7 +45,7 @@ const FileUpload = ({ label, file, preview, onChange, onRemove }: any) => (
       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 hover:border-sky-500/50 transition">
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <FontAwesomeIcon icon={faImage} className="w-8 h-8 text-slate-500 mb-2" />
-          <p className="text-xs text-slate-400 text-center px-2">Click para subir<br/>(Opcional)</p>
+          <p className="text-xs text-slate-400 text-center px-2">Click para subir<br />(Opcional)</p>
         </div>
         <input type="file" className="hidden" accept="image/*" onChange={(e) => onChange(e.target.files?.[0] || null)} />
       </label>
@@ -155,7 +156,7 @@ export default function AgendaTurnosPage() {
       if (!token) return;
       const res = await fetch(`/api/pacientes?search=${encodeURIComponent(searchTerm)}&limit=15`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      }); 
+      });
       if (res.ok) { const data = await res.json(); setPacientesList(data.pacientes || []); }
       else { setPacientesList([]); }
     } catch (error) { console.error('Error cargando pacientes:', error); setPacientesList([]); }
@@ -223,7 +224,7 @@ export default function AgendaTurnosPage() {
     setSelectedPlanId(null);
     setSessionStep('select');
     setShowClinicalForm(false);
-    
+
     if (turno.estado === 'pendiente') {
       setActionModalOpen(true);
     } else {
@@ -309,12 +310,12 @@ export default function AgendaTurnosPage() {
   const handleSubmitTurno = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !formData.pacienteId || !formData.pacienteNombre) { toast.error('Selecciona o crea un paciente primero'); return; }
-    
+
     const [hours, minutes] = formData.hora.split(':');
     const year = selectedDate.getFullYear();
     const month = selectedDate.getMonth();
     const day = selectedDate.getDate();
-    
+
     const fechaInicio = new Date(year, month, day, parseInt(hours), parseInt(minutes), 0, 0);
     const fechaFin = new Date(fechaInicio);
     fechaFin.setMinutes(fechaFin.getMinutes() + formData.duracion);
@@ -326,7 +327,7 @@ export default function AgendaTurnosPage() {
     formDataToSend.append('fechaFin', fechaFin.toISOString());
     formDataToSend.append('duracionMinutos', formData.duracion.toString());
     formDataToSend.append('motivoConsulta', formData.motivo);
-    
+
     if (turnoFiles.orden) formDataToSend.append('ordenMedica', turnoFiles.orden);
     if (turnoFiles.dniFrente) formDataToSend.append('dniFrente', turnoFiles.dniFrente);
     if (turnoFiles.dniDorso) formDataToSend.append('dniDorso', turnoFiles.dniDorso);
@@ -424,8 +425,8 @@ export default function AgendaTurnosPage() {
     }
   };
 
-  useEffect(() => { 
-    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); }; 
+  useEffect(() => {
+    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
   }, []);
 
   useEffect(() => {
@@ -440,8 +441,8 @@ export default function AgendaTurnosPage() {
     return (<div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="w-8 h-8 border-4 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" /></div>);
   }
 
-  const filteredEvents = statusFilter === 'todos' 
-    ? events 
+  const filteredEvents = statusFilter === 'todos'
+    ? events
     : events.filter((event: any) => event.extendedProps.estado === statusFilter);
 
   const currentProfName = profesionales.find(p => p._id === selectedProf);
@@ -449,7 +450,14 @@ export default function AgendaTurnosPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mt-45 mx-auto">
-        
+        <button
+          onClick={() => router.push('/gestion')}
+          className="inline-flex   items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+        >
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+          Volver al Panel Principal
+        </button>
+
         {/* ✅ ENCABEZADO LIMPIO: Solo título, indicador de profesional y botón de acción */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
@@ -483,11 +491,10 @@ export default function AgendaTurnosPage() {
             <button
               key={filter.id}
               onClick={() => setStatusFilter(filter.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-                statusFilter === filter.id
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${statusFilter === filter.id
                   ? 'bg-slate-800 border-sky-500 text-white shadow-lg shadow-sky-900/10'
                   : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-              }`}
+                }`}
             >
               {filter.id !== 'todos' && <span className={`w-2.5 h-2.5 rounded-full ${filter.color}`}></span>}
               {filter.label}
@@ -498,12 +505,12 @@ export default function AgendaTurnosPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl fc-theme-dark">
           <FullCalendar ref={calendarRef} plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} initialView="timeGridWeek"
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' }} locale="es"
-            slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false} selectable={true} select={handleDateSelect} 
+            slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false} selectable={true} select={handleDateSelect}
             events={filteredEvents}
             datesSet={(dateInfo) => {
               setViewDates({ start: dateInfo.start.toISOString(), end: dateInfo.end.toISOString() });
               fetchEvents(dateInfo.start.toISOString(), dateInfo.end.toISOString());
-            }} 
+            }}
             eventClick={handleEventClick} height="auto" />
         </div>
       </div>
@@ -520,14 +527,14 @@ export default function AgendaTurnosPage() {
               <form onSubmit={handleSubmitTurno} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    
+
                     {/* ✅ NUEVO: Selector de Profesional movido al primer campo del modal */}
                     <div>
                       <label className="block text-sm text-slate-400 mb-1">Profesional</label>
                       <div className="relative">
                         <FontAwesomeIcon icon={faUserMd} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <select 
-                          value={selectedProf} 
+                        <select
+                          value={selectedProf}
                           onChange={(e) => {
                             const newProfId = e.target.value;
                             setSelectedProf(newProfId);
@@ -582,9 +589,9 @@ export default function AgendaTurnosPage() {
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div>
                         <label className="block text-sm text-slate-400 mb-1">Fecha</label>
-                        <input 
-                          type="date" 
-                          value={formatDateToLocalInput(selectedDate)} 
+                        <input
+                          type="date"
+                          value={formatDateToLocalInput(selectedDate)}
                           onChange={e => {
                             const val = e.target.value;
                             if (val) {
@@ -593,9 +600,9 @@ export default function AgendaTurnosPage() {
                             } else {
                               setSelectedDate(null);
                             }
-                          }} 
-                          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" 
-                          required 
+                          }}
+                          className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none"
+                          required
                         />
                       </div>
                       <div><label className="block text-sm text-slate-400 mb-1">Hora</label><input type="time" value={formData.hora} onChange={e => setFormData({ ...formData, hora: e.target.value })} className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" required /></div>
@@ -712,7 +719,7 @@ export default function AgendaTurnosPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <FontAwesomeIcon icon={faNotesMedical} className="text-sky-500" /> 
+                    <FontAwesomeIcon icon={faNotesMedical} className="text-sky-500" />
                     {sessionStep === 'select' ? 'Seleccionar Plan de Tratamiento' : (selectedPlanId === 'new' ? 'Iniciar Nuevo Plan' : 'Registrar Sesión')}
                   </h2>
                   <button onClick={() => { setShowClinicalForm(false); setSessionStep('select'); setSelectedPlanId(null); }} className="text-slate-400 hover:text-white text-sm flex items-center gap-1">
@@ -755,10 +762,10 @@ export default function AgendaTurnosPage() {
                       <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4 space-y-3">
                         <h3 className="text-sm font-semibold text-sky-400">1. Datos del Nuevo Plan</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <input required placeholder="Diagnóstico (Ej: Dolor de cadera) *" value={clinicalFormData.diagnostico} onChange={e => setClinicalFormData({...clinicalFormData, diagnostico: e.target.value})} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
-                          <input type="number" min="1" required placeholder="Total de Sesiones *" value={clinicalFormData.totalSesiones} onChange={e => setClinicalFormData({...clinicalFormData, totalSesiones: Number(e.target.value)})} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
+                          <input required placeholder="Diagnóstico (Ej: Dolor de cadera) *" value={clinicalFormData.diagnostico} onChange={e => setClinicalFormData({ ...clinicalFormData, diagnostico: e.target.value })} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
+                          <input type="number" min="1" required placeholder="Total de Sesiones *" value={clinicalFormData.totalSesiones} onChange={e => setClinicalFormData({ ...clinicalFormData, totalSesiones: Number(e.target.value) })} className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
                         </div>
-                        <input placeholder="Objetivo del tratamiento (Opcional)" value={clinicalFormData.objetivo} onChange={e => setClinicalFormData({...clinicalFormData, objetivo: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
+                        <input placeholder="Objetivo del tratamiento (Opcional)" value={clinicalFormData.objetivo} onChange={e => setClinicalFormData({ ...clinicalFormData, objetivo: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
                       </div>
                     )}
 
@@ -767,20 +774,20 @@ export default function AgendaTurnosPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                           <label className="block text-xs text-slate-400 mb-1">Nivel de Dolor (EVA 0-10)</label>
-                          <input type="number" min="0" max="10" value={clinicalFormData.dolorEva} onChange={e => setClinicalFormData({...clinicalFormData, dolorEva: Number(e.target.value)})} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
+                          <input type="number" min="0" max="10" value={clinicalFormData.dolorEva} onChange={e => setClinicalFormData({ ...clinicalFormData, dolorEva: Number(e.target.value) })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
                         </div>
                       </div>
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Técnicas Aplicadas *</label>
-                        <textarea required value={clinicalFormData.tecnicasAplicadas} onChange={e => setClinicalFormData({...clinicalFormData, tecnicasAplicadas: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Electroterapia 10min, Ejercicios..." />
+                        <textarea required value={clinicalFormData.tecnicasAplicadas} onChange={e => setClinicalFormData({ ...clinicalFormData, tecnicasAplicadas: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Electroterapia 10min, Ejercicios..." />
                       </div>
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Evolución y Notas Clínicas *</label>
-                        <textarea required value={clinicalFormData.evolucion} onChange={e => setClinicalFormData({...clinicalFormData, evolucion: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={3} placeholder="Describe la respuesta del paciente..." />
+                        <textarea required value={clinicalFormData.evolucion} onChange={e => setClinicalFormData({ ...clinicalFormData, evolucion: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={3} placeholder="Describe la respuesta del paciente..." />
                       </div>
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Próximos Pasos / Tareas</label>
-                        <textarea value={clinicalFormData.proximosPasos} onChange={e => setClinicalFormData({...clinicalFormData, proximosPasos: e.target.value})} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Continuar con ejercicios en casa..." />
+                        <textarea value={clinicalFormData.proximosPasos} onChange={e => setClinicalFormData({ ...clinicalFormData, proximosPasos: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Continuar con ejercicios en casa..." />
                       </div>
                     </div>
 
