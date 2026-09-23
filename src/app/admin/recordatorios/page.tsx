@@ -1,33 +1,37 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faSpinner, faCheckCircle, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { useRouter } from 'next/navigation';
 
 export default function RecordatoriosPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<any>(null);
+
+  // Redirigir si no está logueado
+  if (status === 'unauthenticated') {
+    router.push('/login?callbackUrl=/admin/recordatorios');
+  }
 
   const enviarRecordatorios = async () => {
     setLoading(true);
     setResultado(null);
     try {
-      // Usamos la misma clave secreta que configuramos en Vercel
-      const res = await fetch('/api/recordatorios', {
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'tu_clave_secreta_larga_y_aleatoria_12345'}`
-        }
-      });
+      // ✅ Ya no necesitamos el header, NextAuth envía las cookies automáticamente
+      // y la API verificará que session.user.role sea válido.
+      const res = await fetch('/api/recordatorios');
       const data = await res.json();
       
       if (data.success) {
         setResultado(data);
         toast.success(`✅ ${data.enviados} recordatorios enviados exitosamente`);
       } else {
-        toast.error('Error al procesar los recordatorios');
+        toast.error(data.message || 'Error al procesar los recordatorios');
       }
     } catch (error) {
       toast.error('Error de conexión con el servidor');
@@ -35,6 +39,10 @@ export default function RecordatoriosPage() {
       setLoading(false);
     }
   };
+
+  if (status === 'loading') {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><FontAwesomeIcon icon={faSpinner} className="w-8 h-8 animate-spin text-sky-500" /></div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">

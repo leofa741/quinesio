@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/lib/auth';
 import nodemailer from 'nodemailer';
 import connectDB from '@/app/lib/mongoose';
 import Turno from '@/app/models/Turno';
@@ -7,9 +9,14 @@ connectDB();
 
 export async function GET(req: NextRequest) {
   try {
-    // 🔒 Seguridad: Verificar que la petición venga de nuestro Cron Job
+    // 1. Verificar autorización: O es el Cron Job, O es un usuario logueado con permisos
+    const session = await getServerSession(authOptions);
     const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    
+    const isCronJob = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const isAuthorizedUser = session && ['admin', 'profesionales', 'administrativos'].includes(session.user?.role || '');
+
+    if (!isCronJob && !isAuthorizedUser) {
       return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
     }
 
@@ -19,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     const turnosProximos = await Turno.find({
       fechaInicio: { $gte: ahora, $lte: en24Horas },
-      estado: 'confirmado', // Solo recordamos turnos confirmados
+      estado: 'confirmado',
       recordatorioEnviado: false
     })
     .populate('paciente', 'name email')
@@ -29,7 +36,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, message: 'No hay recordatorios pendientes', enviados: 0 });
     }
 
-    // ✅ Reutilizamos TU configuración de Nodemailer
+    // Configuración de Nodemailer (la misma que ya usas)
     const transporter = nodemailer.createTransport({
       service: process.env.MAILER_SERVICE || 'gmail',
       host: process.env.MAILER_HOST,
@@ -51,6 +58,8 @@ export async function GET(req: NextRequest) {
 
         if (!paciente?.email) {
           errores.push(`Paciente ID ${turno.paciente} no tiene email registrado`);
+          // Marcamos como enviado para no seguir intentando con este turno sin email
+          await Turno.findByIdAndUpdate(turno._id, { recordatorioEnviado: true });
           continue;
         }
 
@@ -61,7 +70,6 @@ export async function GET(req: NextRequest) {
           hour: '2-digit', minute: '2-digit'
         });
 
-        // Plantilla de email coherente con tu diseño actual
         const mailOptions = {
           from: `"Centro Kinesiológico" <${process.env.MAILER_EMAIL}>`,
           to: paciente.email,
