@@ -34,6 +34,7 @@ export interface ITurno extends Document {
   estadoPagoPaciente: 'pendiente' | 'pagado' | 'parcial';
   estadoPagoProfesional: 'pendiente' | 'liquidado';
   observacionesPago?: string;
+  recordatorioEnviado?: boolean;
   
   // Metadata
   creadoPor: mongoose.Types.ObjectId;
@@ -87,6 +88,8 @@ const TurnoSchema = new Schema<ITurno>({
     default: 'pendiente' 
   },
   observacionesPago: { type: String, trim: true },
+
+  recordatorioEnviado: { type: Boolean, default: false },
   
   creadoPor: { type: Schema.Types.ObjectId, ref: 'User', required: true }
 }, { 
@@ -101,5 +104,6 @@ TurnoSchema.index({ paciente: 1, fechaInicio: -1 });
 TurnoSchema.index({ estado: 1 });
 TurnoSchema.index({ estadoPagoPaciente: 1 }); // Nuevo índice para el módulo de pagos
 TurnoSchema.index({ estadoPagoProfesional: 1 }); // Nuevo índice para el módulo de pagos
+TurnoSchema.index({ recordatorioEnviado: 1, fechaInicio: 1 });
 
 export default mongoose.models.Turno || mongoose.model<ITurno>('Turno', TurnoSchema);

@@ -26,7 +26,8 @@ import {
   FaUserClock,
   FaCashRegister,
   FaDumbbell,
-  FaFilePrescription
+  FaFilePrescription,
+  FaBell
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
@@ -127,6 +128,14 @@ const modules = [
     icon: <FaFilePrescription className="text-2xl text-zinc-400" />,
     href: '/admin/prescripciones',
     roles: ['admin', 'profesionales'],
+  },
+  {
+    id: 'recordatorios',
+    title: 'Recordatorios de Turnos',
+    description: 'Envía recordatorios automáticos por email a los pacientes antes de sus turnos.',
+    icon: <FaBell className="text-2xl text-zinc-400" />,
+    href: '/admin/recordatorios',
+    roles: ['admin', 'administrativos'], // ✅ Ideal para el personal que gestiona la agenda
   },
   {
     id: 'historial-turnos',
