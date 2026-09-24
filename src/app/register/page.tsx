@@ -6,29 +6,32 @@ import { toast } from 'react-toastify';
 import { RingLoader } from 'react-spinners';
 
 export default function RegisterPage() {
+  const [name, setName] = useState(''); // ✅ NUEVO ESTADO
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const isValidForm = () => email && password.length >= 6 && /\S+@\S+\.\S+/.test(email);
+  // ✅ AHORA VALIDAMOS QUE EL NOMBRE TAMBIÉN ESTÉ LLENO
+  const isValidForm = () => name.trim() && email && password.length >= 6 && /\S+@\S+\.\S+/.test(email);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isValidForm()) {
-      setError('Por favor, ingresa un correo válido y una contraseña de al menos 6 caracteres.');
+      setError('Por favor, completa el nombre, un correo válido y una contraseña de al menos 6 caracteres.');
       return;
     }
 
     setLoading(true);
     setError('');
 
-    const response = await fetch('/api/auth/register/', {
+    // ✅ AHORA ENVIAMOS TAMBIÉN EL NOMBRE
+    const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ name, email, password }),
     });
 
     const data = await response.json();
@@ -58,6 +61,22 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleRegister} className="space-y-5">
+            {/* ✅ NUEVO CAMPO: NOMBRE */}
+            <div>
+              <label htmlFor="name" className="block text-gray-800 dark:text-gray-200 font-medium mb-2">
+                Nombre Completo
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Juan Pérez"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition"
+                required
+              />
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-gray-800 dark:text-gray-200 font-medium mb-2">
                 Correo Electrónico

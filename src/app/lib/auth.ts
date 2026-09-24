@@ -151,9 +151,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         const email = credentials.email.trim().toLowerCase();
+           // ✅ SOLUCIÓN: Agregar .select('+password') antes de .lean()
+        const user = await UserModel.findOne({ email }).select('+password').lean() as IUser | null;
+
 
         // ✅ CORREGIDO: Tipar explícitamente + usar helper para _id
-        const user = await UserModel.findOne({ email }).lean() as IUser | null;
+        // const user = await UserModel.findOne({ email }).lean() as IUser | null;
 
         if (!user) {
           throw new Error('Usuario no encontrado');
