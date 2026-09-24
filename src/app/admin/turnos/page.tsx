@@ -718,6 +718,24 @@ export default function AgendaTurnosPage() {
                     </button>
                   )}
 
+
+                  {selectedTurno.start && selectedTurno.end && (
+                    <a
+                      href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Turno: ${selectedTurno.paciente?.name || 'Paciente'}`)}&dates=${new Date(selectedTurno.start).toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(selectedTurno.end).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(`Motivo: ${selectedTurno.motivo || 'Consulta'}`)}&location=${encodeURIComponent('Centro Kinesiológico')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      {/* Icono simple de calendario */}
+                      <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
+                      </svg>
+                      <span>Agregar a Google Calendar</span>
+                    </a>
+                  )}
+
+
+
                   {/* Botón de Registrar Sesión (solo si el turno está confirmado o pendiente) */}
                   {(selectedTurno.estado === 'confirmado' || selectedTurno.estado === 'pendiente') && (
                     <button onClick={() => { setShowClinicalForm(true); setSessionStep('select'); }}
