@@ -6,6 +6,8 @@ import { FaStar, FaArrowRight, FaHeartbeat, FaUserMd, FaWhatsapp, FaSearch, FaHo
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import VideoHero from './components/ui/VideoHero';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRight, faShieldHalved, faUserMd } from '@fortawesome/free-solid-svg-icons';
 // ─────────────────────────────────────────────────────────────
 // 🔹 Tipos para CENTRO DE KINESIOLOGÍA
 // ─────────────────────────────────────────────────────────────
@@ -69,10 +71,10 @@ function PageContent() {
   // ✅ Estados para KINESIOLOGÍA
   const [featuredServices, setFeaturedServices] = useState<Servicio[]>([]);
   const [allServices, setAllServices] = useState<Servicio[]>([]);
-  
+
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,7 +98,7 @@ function PageContent() {
   // 📥 Cargar datos HARDCODEADOS (SIN API, SIN FETCH, SIN NEXT-AUTH)
   useEffect(() => {
     console.log("🚀 Cargando datos locales (sin API)");
-    
+
     const timer = setTimeout(() => {
       const mockServicios: Servicio[] = [
         {
@@ -118,7 +120,7 @@ function PageContent() {
           categoria: 'deportiva',
           precioParticular: 18000,
           requiereOrdenMedica: false,
-           imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
+          imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
           slug: 'kinesiologia-deportiva',
           destacado: true,
           obrasSocialesAceptadas: ['OSDE', 'Medifé', 'Particular']
@@ -154,7 +156,7 @@ function PageContent() {
           categoria: 'neurologica',
           precioParticular: 20000,
           requiereOrdenMedica: true,
-            imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
+          imagen: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=800',
           slug: 'rehabilitacion-neurologica',
           destacado: false,
           obrasSocialesAceptadas: ['PAMI', 'IOMA', 'OSDE']
@@ -165,7 +167,7 @@ function PageContent() {
       setAllServices(mockServicios);
       setFeaturedLoading(false);
       setServicesLoading(false);
-      
+
       console.log("✅ Datos locales cargados exitosamente");
     }, 800); // Simula 800ms de carga para ver el skeleton
 
@@ -218,11 +220,11 @@ function PageContent() {
   const ServiceCard = ({ service }: { service: Servicio }) => (
     <div className="group relative bg-slate-900/50 rounded-2xl overflow-hidden border border-white/10 hover:border-sky-500/30 transition-all duration-300 hover:-translate-y-1">
       <div className="relative aspect-[3/4] overflow-hidden">
-        <Image 
-          src={service.imagen || '/img/kine-default.jpg'} 
-          alt={service.nombre} 
+        <Image
+          src={service.imagen || '/img/kine-default.jpg'}
+          alt={service.nombre}
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105" 
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {service.destacado && (
           <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-sky-500/90 text-slate-900 text-[10px] font-bold uppercase tracking-wider shadow-lg">
@@ -231,7 +233,7 @@ function PageContent() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80" />
         <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-          <button 
+          <button
             onClick={() => setSelectedService(service)}
             className="w-full py-2.5 rounded-xl bg-white text-slate-900 font-semibold text-sm hover:bg-sky-100 transition-colors shadow-lg"
           >
@@ -259,11 +261,12 @@ function PageContent() {
   return (
     <div ref={containerRef} className="min-h-screen bg-slate-950 text-white">
       <div className="relative w-full left-0 right-0">
+
         <VideoHero videoSrc="/videos/quinesio.mp4" overlayOpacity={0.5}>
           <div className="max-w-7xl mx-auto px-6 pt-40 sm:pt-48">
             <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-8 items-center">
               <div className="hidden lg:flex justify-center">
-                <div 
+                <div
                   className="text-white font-black uppercase leading-none tracking-tight text-5xl opacity-90 mr-10 mt-2"
                   style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                 >
@@ -277,7 +280,7 @@ function PageContent() {
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out rounded-2xl" />
                     <h1 className="relative z-10 text-4xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tight text-white/60 group-hover:text-white/90 group-hover:[text-shadow:0_0_30px_rgba(56,189,248,0.15)] transition-all duration-500 ease-out selection:bg-sky-500/20 rounded-2xl">
                       Recuperá tu movimiento,
-                      <div>recuperá tu vida.</div>  
+                      <div>recuperá tu vida.</div>
                     </h1>
                   </div>
                 </div>
@@ -285,15 +288,27 @@ function PageContent() {
                   <div>
                     <h2 className="text-3xl md:text-5xl font-black uppercase flex items-center gap-3">
                       Centro de Kinesiología
-                   
+
                     </h2>
                     <p className="mt-2 text-sm md:text-lg uppercase tracking-wider text-gray-300">
                       Buenos Aires, Argentina · Atención de Lunes a Sábados
                     </p>
                   </div>
-                  <a href="/turnos" className="inline-flex items-center justify-center px-8 py-4 bg-sky-500 text-slate-950 font-bold uppercase tracking-wide hover:bg-sky-400 transition-all duration-300 rounded-full shadow-lg shadow-sky-500/20">
-                    Solicitar Turno
-                  </a>
+                  <Link
+                    href="/verificar"
+                    className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-sky-600 to-blue-700 text-white font-semibold rounded-2xl shadow-lg shadow-sky-500/20 hover:shadow-xl hover:shadow-sky-500/30 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+                  >
+                    {/* Efecto de brillo al pasar el mouse */}
+                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+
+                    <FontAwesomeIcon icon={faShieldHalved} className="w-5 h-5 text-sky-200 group-hover:text-white transition-colors" />
+                    <span className="tracking-wide">Verificar Prescripción</span>
+
+                    {/* Flecha que se mueve al hacer hover */}
+                    <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 text-sky-200 group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
+                  </Link>
+
+
                 </div>
               </div>
             </div>
@@ -338,7 +353,7 @@ function PageContent() {
             </h2>
 
             <p className="text-base sm:text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto px-2">
-              Un equipo de profesionales matriculados comprometidos con tu recuperación. 
+              Un equipo de profesionales matriculados comprometidos con tu recuperación.
               <span className="block sm:inline"> Tecnología de vanguardia y </span>
               <span className="bg-gradient-to-r from-sky-300 to-blue-300 bg-clip-text text-transparent font-semibold">calidez humana</span>.
             </p>
@@ -391,7 +406,7 @@ function PageContent() {
               </h2>
 
               <p className="text-base sm:text-lg text-slate-400 leading-relaxed max-w-xl px-2">
-                Instalaciones <span className="text-white font-medium">modernas</span>, <span className="text-white font-medium">accesibilidad garantizada</span> y un enfoque centrado en el paciente. 
+                Instalaciones <span className="text-white font-medium">modernas</span>, <span className="text-white font-medium">accesibilidad garantizada</span> y un enfoque centrado en el paciente.
                 Te acompañamos en cada paso de tu rehabilitación.
               </p>
 
@@ -433,7 +448,7 @@ function PageContent() {
               <div className="relative group w-full max-w-md">
                 <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-sky-500/30 via-blue-500/30 to-cyan-500/30 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-500 rounded-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-500 blur-sm pointer-events-none" />
-               
+
                 <div className="relative bg-slate-900/80 backdrop-blur-xl rounded-2xl p-2 sm:p-3 border border-white/10 shadow-2xl shadow-sky-900/30 group-hover:shadow-sky-900/50 transition-all duration-500 group-hover:scale-[1.01]">
                   <div className="flex items-center justify-between px-3 py-2 mb-3">
                     <div className="flex items-center gap-2">
@@ -664,7 +679,7 @@ function PageContent() {
                       )}
                     </p>
                   </div>
-                  
+
                   <div className="p-3 rounded-lg bg-white/5 border border-white/10">
                     <span className="text-xs text-slate-500 uppercase tracking-wider block mb-1">Obras Sociales Aceptadas</span>
                     <div className="flex flex-wrap gap-1.5 mt-1">

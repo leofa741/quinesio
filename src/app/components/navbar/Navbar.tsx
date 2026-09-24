@@ -356,17 +356,7 @@ export default function Navbar() {
             <div className="order-2 lg:order-4 flex items-center space-x-3">
 
 
-              <Link
-                href="/verificar"
-                className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                  } text-white hover:shadow-xl hover:shadow-sky-900/40`}
-
-              >
-                <span className="relative z-10 flex items-center gap-1.5">
-                  <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Verificación de Prescripciones
-                </span>
-                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              </Link>
+        
               {session ? (
                 <div className="hidden lg:flex items-center space-x-4">
                   <Link href="/profile" className={`group flex items-center space-x-2.5 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'
