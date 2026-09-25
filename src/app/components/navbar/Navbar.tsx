@@ -212,7 +212,7 @@ export default function Navbar() {
                   </div>
                   <span className={`text-[15px] tracking-[0.4em] uppercase mt-0 font-light transition-colors duration-500 flex items-center gap-2 ${scrolled ? 'text-slate-500' : 'text-slate-400'
                     } group-hover:text-sky-200`}>
-                    Kinesalud<span className="text-sky-400">.AR</span>
+                    Kinesalud<span className="text-sky-400">.AR 🇦🇷</span>
 
                   </span>
                 </div>
