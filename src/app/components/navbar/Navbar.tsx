@@ -63,7 +63,7 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const watsapp = 5491132538837;
+  const watsapp = 5491111223344;
   const mensaje = 'Hola,%20me%20interesa%20consultar%20por%20un%20turno%20o%20servicio%20kinésico';
 
   useEffect(() => {
@@ -96,26 +96,46 @@ export default function Navbar() {
     }
   }, [isDarkMode]);
 
-  // 🔹 Carga de Especialidades / Servicios (HARDCODEADO - SIN FETCH)
+  // 🔹 Carga de Especialidades / Servicios (DESDE API)
   useEffect(() => {
-    console.log("🚀 Cargando categorías del Navbar (modo local)");
+    console.log("🚀 Cargando categorías del Navbar");
 
-    const timer = setTimeout(() => {
-      const mockCategorias = [
-        { name: 'Rehabilitación', slug: 'rehabilitacion', count: 12 },
-        { name: 'Kinesiología Deportiva', slug: 'deportiva', count: 8 },
-        { name: 'Pilates Reformer', slug: 'pilates', count: 5 },
-        { name: 'Masoterapia', slug: 'masoterapia', count: 6 },
-        { name: 'Neurología', slug: 'neurologica', count: 4 }
-      ];
+    const fetchCategorias = async () => {
+      try {
+        const res = await fetch('/api/gestion/especialidades');
+        
+        // Si la API devuelve error (ej. 401 o 500), no intentamos mapear
+        if (!res.ok) {
+          console.warn("No se pudieron cargar las categorías (posible falta de auth o error de servidor)");
+          setLoadingCategories(false);
+          return;
+        }
 
-      setCategories(mockCategorias);
-      setLoadingCategories(false);
-      console.log("✅ Categorías del Navbar cargadas");
-    }, 500);
+        const data = await res.json();
+        
+        // ⚠️ IMPORTANTE: Verificamos que sea un array antes de mapear
+        if (Array.isArray(data)) {
+          const categoriasFormateadas = data.map((esp: any) => ({
+            name: esp.name,
+            slug: esp.slug,
+            count: esp.count,
+          }));
+          setCategories(categoriasFormateadas);
+        } else {
+          setCategories([]);
+        }
+        
+        setLoadingCategories(false);
+        console.log("✅ Categorías del Navbar cargadas");
+      } catch (error) {
+        console.error("❌ Error al cargar categorías:", error);
+        setLoadingCategories(false);
+      }
+    };
 
-    return () => clearTimeout(timer);
+    fetchCategorias();
   }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 30);
@@ -157,8 +177,8 @@ export default function Navbar() {
 
   // 🎨 Paleta Premium - Impronta Nacional Argentina (Celeste, Azul Profundo y Sol de Mayo)
   const gradients = {
-    primary: 'from-sky-500 via-blue-600 to-sky-700', // Celeste y azul bandera
-    accent: 'from-sky-400 via-blue-500 to-amber-400', // Celeste, azul y toque dorado (Sol de Mayo)
+    primary: 'from-sky-500 via-blue-600 to-sky-700',
+    accent: 'from-sky-400 via-blue-500 to-amber-400',
     subtle: 'from-slate-900 via-slate-900 to-slate-900',
     glow: 'from-sky-500/20 via-blue-500/20 to-amber-400/10',
   };
@@ -199,7 +219,6 @@ export default function Navbar() {
               <Link href="/" onClick={closeMenu} className="block group">
                 <div className="flex flex-col items-center lg:items-start">
                   <div className="relative">
-                    {/* Glow detrás del logo con colores nacionales */}
                     <span className="absolute inset-0 bg-gradient-to-r from-sky-400/30 via-blue-500/30 to-amber-400/30 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     <Image
                       src="/img/Logo-removebg-preview.png"
@@ -213,7 +232,6 @@ export default function Navbar() {
                   <span className={`text-[15px] tracking-[0.4em] uppercase mt-0 font-light transition-colors duration-500 flex items-center gap-2 ${scrolled ? 'text-slate-500' : 'text-slate-400'
                     } group-hover:text-sky-200`}>
                     Kinesalud<span className="text-sky-400">.AR 🇦🇷</span>
-
                   </span>
                 </div>
               </Link>
@@ -313,7 +331,7 @@ export default function Navbar() {
                             categories.map((cat, index) => (
                               <Link
                                 key={cat.slug}
-                                href={`/servicios?especialidad=${cat.slug}`}
+                                href={`/servicios/${cat.slug}`} 
                                 className="group/item relative block px-6 py-3.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-all duration-200 overflow-hidden"
                                 onClick={() => {
                                   closeMenu();
@@ -354,9 +372,6 @@ export default function Navbar() {
 
             {/* ───────── RIGHT ACTIONS ───────── */}
             <div className="order-2 lg:order-4 flex items-center space-x-3">
-
-
-        
               {session ? (
                 <div className="hidden lg:flex items-center space-x-4">
                   <Link href="/profile" className={`group flex items-center space-x-2.5 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'
@@ -371,65 +386,26 @@ export default function Navbar() {
                     </div>
                   </Link>
 
-
                   {(role === 'pacientes') && (
                     <>
-                      <Link
-                        href="/turnos"
-                        className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                          } text-white hover:shadow-xl hover:shadow-sky-900/40`}
-
-                      >
-                        <span className="relative z-10 flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Turnos
-                        </span>
+                      <Link href="/turnos" className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`} text-white hover:shadow-xl hover:shadow-sky-900/40`}>
+                        <span className="relative z-10 flex items-center gap-1.5"><FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Turnos</span>
                         <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                       </Link>
-
-                      <Link
-                        href="/profile/notificaciones"
-                        className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                          } text-white hover:shadow-xl hover:shadow-sky-900/40`}
-
-                      >
-                        <span className="relative z-10 flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Alertas
-                        </span>
+                      <Link href="/profile/notificaciones" className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`} text-white hover:shadow-xl hover:shadow-sky-900/40`}>
+                        <span className="relative z-10 flex items-center gap-1.5"><FontAwesomeIcon icon={faBell} className="text-[10px]" /> Alertas</span>
                         <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                       </Link>
-
-                      <Link
-                        href="/profile/mis-ejercicios"
-                        className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                          } text-white hover:shadow-xl hover:shadow-sky-900/40`}
-
-                      >
-                        <span className="relative z-10 flex items-center gap-1.5">
-                          <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Mis Ejercicios
-                        </span>
+                      <Link href="/profile/mis-ejercicios" className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`} text-white hover:shadow-xl hover:shadow-sky-900/40`}>
+                        <span className="relative z-10 flex items-center gap-1.5"><FontAwesomeIcon icon={faDumbbell} className="text-[10px]" /> Mis Ejercicios</span>
                         <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                       </Link>
-
-
-
                     </>
-
-
                   )}
 
-
-
-
-
                   {(role === 'admin' || role === 'profesionales' || role === 'administrativos') && (
-                    <Link
-                      href="/gestion"
-                      className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`
-                        } text-white hover:shadow-xl hover:shadow-sky-900/40`}
-                    >
-                      <span className="relative z-10 flex items-center gap-1.5">
-                        <FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Panel
-                      </span>
+                    <Link href="/gestion" className={`group relative text-[10px] px-4 py-2 rounded-xl font-medium tracking-wide uppercase transition-all duration-500 overflow-hidden ${scrolled ? 'bg-gradient-to-r from-sky-600/90 via-blue-600/90 to-sky-700/90' : `bg-gradient-to-r ${gradients.primary}`} text-white hover:shadow-xl hover:shadow-sky-900/40`}>
+                      <span className="relative z-10 flex items-center gap-1.5"><FontAwesomeIcon icon={faUserMd} className="text-[10px]" /> Panel</span>
                       <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                     </Link>
                   )}
@@ -439,31 +415,20 @@ export default function Navbar() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (typeof handleLogout === "function") {
-                        handleLogout();
-                      }
+                      if (typeof handleLogout === "function") handleLogout();
                     }}
-                    className={`relative z-50 pointer-events-auto cursor-pointer text-[10px] tracking-[0.25em] uppercase transition-all duration-300 ${scrolled ? 'text-slate-500 hover:text-sky-400' : 'text-slate-400 hover:text-sky-300'
-                      } hover:translate-x-0.5`}
+                    className={`relative z-50 pointer-events-auto cursor-pointer text-[10px] tracking-[0.25em] uppercase transition-all duration-300 ${scrolled ? 'text-slate-500 hover:text-sky-400' : 'text-slate-400 hover:text-sky-300'} hover:translate-x-0.5`}
                   >
                     Salir
                   </button>
                 </div>
               ) : (
                 <div className="hidden lg:flex items-center space-x-3">
-                  <Link
-                    href="/login"
-                    className={`group relative text-[11px] tracking-[0.25em] uppercase font-medium py-2 px-1 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'
-                      } hover:text-white`}
-                  >
+                  <Link href="/login" className={`group relative text-[11px] tracking-[0.25em] uppercase font-medium py-2 px-1 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'} hover:text-white`}>
                     <span className="relative z-10">Ingresar</span>
                     <span className="absolute -bottom-1 left-0 w-0 h-px bg-gradient-to-r from-sky-400 via-blue-500 to-amber-400 transition-all duration-500 group-hover:w-full" />
                   </Link>
-
-                  <Link
-                    href="/register"
-                    className="group relative text-[10px] px-5 py-2.5 rounded-xl tracking-[0.18em] uppercase font-medium overflow-hidden"
-                  >
+                  <Link href="/register" className="group relative text-[10px] px-5 py-2.5 rounded-xl tracking-[0.18em] uppercase font-medium overflow-hidden">
                     <span className={`absolute inset-0 bg-gradient-to-r ${gradients.primary} transition-opacity duration-500`} />
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
                     <span className="absolute inset-0 rounded-xl border border-white/20 group-hover:border-white/40 transition-colors duration-300" />
@@ -476,24 +441,19 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={toggleMobileMenu}
-                className={`lg:hidden group relative p-2.5 rounded-xl transition-all duration-300 ${scrolled ? 'text-white' : 'text-white'
-                  } hover:bg-white/10`}
+                className={`lg:hidden group relative p-2.5 rounded-xl transition-all duration-300 ${scrolled ? 'text-white' : 'text-white'} hover:bg-white/10`}
                 aria-label={isMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
                 aria-expanded={isMenuOpen}
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-sky-400/20 via-blue-500/20 to-amber-400/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm" />
-                <FontAwesomeIcon
-                  icon={isMenuOpen ? faXmark : faBars}
-                  className="relative text-2xl transition-transform duration-300 group-hover:scale-110"
-                />
+                <FontAwesomeIcon icon={isMenuOpen ? faXmark : faBars} className="relative text-2xl transition-transform duration-300 group-hover:scale-110" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Línea inferior animada (Celeste/Azul) */}
-        <div className={`h-px bg-gradient-to-r from-transparent via-sky-500/40 to-transparent transition-all duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'
-          }`} />
+        <div className={`h-px bg-gradient-to-r from-transparent via-sky-500/40 to-transparent transition-all duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'}`} />
       </nav>
 
       {/* ═══════════════════════════════════════════════════════
@@ -501,29 +461,18 @@ export default function Navbar() {
           ═══════════════════════════════════════════════════════ */}
       {isMenuOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40 bg-slate-900/90 backdrop-blur-xl lg:hidden animate-fadeIn"
-            onClick={closeMenu}
-          >
-            {/* Orbes de gradiente animados (Celeste y Azul) */}
+          <div className="fixed inset-0 z-40 bg-slate-900/90 backdrop-blur-xl lg:hidden animate-fadeIn" onClick={closeMenu}>
             <div className="absolute top-1/4 -left-16 w-64 h-64 bg-sky-600/20 rounded-full blur-3xl animate-pulse" />
             <div className="absolute bottom-1/4 -right-16 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
           </div>
 
-          <div
-            className="fixed top-0 right-0 h-full w-full max-w-sm z-50 bg-slate-900/95 backdrop-blur-2xl shadow-2xl lg:hidden animate-slideInRight"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="fixed top-0 right-0 h-full w-full max-w-sm z-50 bg-slate-900/95 backdrop-blur-2xl shadow-2xl lg:hidden animate-slideInRight" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col h-full">
               <div className="flex justify-between items-center p-7 border-b border-white/10">
                 <span className="text-[10px] tracking-[0.35em] uppercase text-slate-500 flex items-center gap-2">
                   Menú <span className="text-sky-400">🇦🇷</span>
                 </span>
-                <button
-                  onClick={closeMenu}
-                  className="group p-2.5 hover:bg-white/10 rounded-xl transition-all duration-300"
-                  aria-label="Cerrar menú"
-                >
+                <button onClick={closeMenu} className="group p-2.5 hover:bg-white/10 rounded-xl transition-all duration-300" aria-label="Cerrar menú">
                   <FontAwesomeIcon icon={faXmark} className="text-xl text-slate-400 group-hover:text-sky-400 group-hover:rotate-90 transition-all duration-300" />
                 </button>
               </div>
@@ -532,21 +481,14 @@ export default function Navbar() {
                 <MobileNavLink href="/" onClick={closeMenu} index={0}>Inicio</MobileNavLink>
 
                 <div>
-                  <button
-                    onClick={() => setMobileCategoryOpen(prev => !prev)}
-                    className="w-full group flex justify-between items-center py-4 px-4 text-slate-200 hover:text-white transition-all duration-300 rounded-xl"
-                  >
+                  <button onClick={() => setMobileCategoryOpen(prev => !prev)} className="w-full group flex justify-between items-center py-4 px-4 text-slate-200 hover:text-white transition-all duration-300 rounded-xl">
                     <span className="text-sm tracking-[0.25em] uppercase font-medium">Especialidades</span>
                     <div className="relative">
-                      <FontAwesomeIcon
-                        icon={mobileCategoryOpen ? faChevronUp : faChevronDown}
-                        className={`text-slate-500 transition-all duration-500 ${mobileCategoryOpen ? 'text-sky-400' : 'group-hover:text-sky-400'}`}
-                      />
+                      <FontAwesomeIcon icon={mobileCategoryOpen ? faChevronUp : faChevronDown} className={`text-slate-500 transition-all duration-500 ${mobileCategoryOpen ? 'text-sky-400' : 'group-hover:text-sky-400'}`} />
                     </div>
                   </button>
 
-                  <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileCategoryOpen ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'
-                    }`}>
+                  <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${mobileCategoryOpen ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
                     <div className="ml-4 pl-4 border-l border-white/10 space-y-1">
                       {loadingCategories ? (
                         <p className="py-4 px-4 text-slate-500 text-sm italic">Cargando...</p>
@@ -554,7 +496,7 @@ export default function Navbar() {
                         categories.map((cat, index) => (
                           <Link
                             key={cat.slug}
-                            href={`/servicios?especialidad=${cat.slug}`}
+                            href={`/servicios/${cat.slug}`} 
                             onClick={closeMenu}
                             className="group/item block py-3.5 px-4 text-slate-400 hover:text-white transition-all duration-300 rounded-lg text-sm relative overflow-hidden"
                             style={{ animationDelay: `${index * 25}ms` }}
@@ -577,15 +519,9 @@ export default function Navbar() {
                 <MobileNavLink href="/nosotros" onClick={closeMenu} index={2}>Nosotros</MobileNavLink>
                 <MobileNavLink href="/verificar" onClick={closeMenu} index={2}>Verificación de Prescripciones</MobileNavLink>
 
-
-
                 {session ? (
                   <div className="pt-8 mt-6 border-t border-white/10">
-                    <Link
-                      href="/perfil"
-                      onClick={closeMenu}
-                      className="group flex items-center space-x-4 py-4 px-4 text-slate-200 hover:text-white hover:bg-white/5 transition-all duration-300 rounded-xl"
-                    >
+                    <Link href="/perfil" onClick={closeMenu} className="group flex items-center space-x-4 py-4 px-4 text-slate-200 hover:text-white hover:bg-white/5 transition-all duration-300 rounded-xl">
                       <div className={`relative w-11 h-11 rounded-full bg-gradient-to-br ${gradients.accent} flex items-center justify-center text-white text-sm font-medium shadow-lg`}>
                         <span className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         {image ? (<img src={image} alt="Profile" className="w-8 h-8 rounded-full object-cover" />) : (name?.charAt(0) || 'U')}
@@ -596,63 +532,31 @@ export default function Navbar() {
                       </div>
                     </Link>
 
-                    {/* rol paciente */}
                     {role === 'pacientes' && (
                       <>
-                        <Link
-                          href="/turnos"
-                          onClick={closeMenu}
-                          className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                        >
-                          <span className="relative z-10 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faUserMd} /> Mis Turnos
-                          </span>
+                        <Link href="/turnos" onClick={closeMenu} className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}>
+                          <span className="relative z-10 flex items-center gap-2"><FontAwesomeIcon icon={faUserMd} /> Mis Turnos</span>
                           <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </Link>
-
-                        <Link
-                          href="/perfil/notificaciones"
-                          onClick={closeMenu}
-                          className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                        >
-                          <span className="relative z-10 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faBell} /> Alertas
-                          </span>
+                        <Link href="/perfil/notificaciones" onClick={closeMenu} className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}>
+                          <span className="relative z-10 flex items-center gap-2"><FontAwesomeIcon icon={faBell} /> Alertas</span>
                           <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </Link>
-
-                        <Link
-                          href="/perfil/mis-ejercicios"
-                          onClick={closeMenu}
-                          className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                        >
-                          <span className="relative z-10 flex items-center gap-2">
-                            <FontAwesomeIcon icon={faDumbbell} /> Mis Ejercicios
-                          </span>
+                        <Link href="/perfil/mis-ejercicios" onClick={closeMenu} className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}>
+                          <span className="relative z-10 flex items-center gap-2"><FontAwesomeIcon icon={faDumbbell} /> Mis Ejercicios</span>
                           <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         </Link>
                       </>
                     )}
 
-
-
                     {(role === 'admin' || role === 'profesionales' || role === 'administrativos') && (
-                      <Link
-                        href="/gestion"
-                        onClick={closeMenu}
-                        className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}
-                      >
-                        <span className="relative z-10 flex items-center gap-2">
-                          <FontAwesomeIcon icon={faUserMd} /> Panel de Gestión
-                        </span>
+                      <Link href="/gestion" onClick={closeMenu} className={`group block py-4 px-4 text-sm font-medium rounded-xl transition-all duration-500 bg-gradient-to-r ${gradients.primary} text-white mt-3 relative overflow-hidden`}>
+                        <span className="relative z-10 flex items-center gap-2"><FontAwesomeIcon icon={faUserMd} /> Panel de Gestión</span>
                         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                       </Link>
                     )}
 
-                    <button
-                      onClick={() => { closeMenu(); handleLogout(); }}
-                      className="w-full text-left py-4 px-4 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300 rounded-xl font-medium mt-3 group"
-                    >
+                    <button onClick={() => { closeMenu(); handleLogout(); }} className="w-full text-left py-4 px-4 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-300 rounded-xl font-medium mt-3 group">
                       <span className="flex items-center space-x-2">
                         <span>Cerrar Sesión</span>
                         <FontAwesomeIcon icon={faArrowRight} className="text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
@@ -661,19 +565,11 @@ export default function Navbar() {
                   </div>
                 ) : (
                   <div className="pt-8 mt-6 border-t border-white/10 space-y-3">
-                    <Link
-                      href="/login"
-                      onClick={closeMenu}
-                      className="group block w-full py-4 px-6 bg-gradient-to-r from-slate-800 to-slate-700 text-white text-center tracking-[0.2em] uppercase text-[11px] font-medium rounded-xl transition-all duration-500 hover:from-slate-700 hover:to-slate-600 relative overflow-hidden"
-                    >
+                    <Link href="/login" onClick={closeMenu} className="group block w-full py-4 px-6 bg-gradient-to-r from-slate-800 to-slate-700 text-white text-center tracking-[0.2em] uppercase text-[11px] font-medium rounded-xl transition-all duration-500 hover:from-slate-700 hover:to-slate-600 relative overflow-hidden">
                       <span className="relative z-10">Iniciar Sesión</span>
                       <span className="absolute inset-0 rounded-xl border border-white/10 group-hover:border-sky-500/30 transition-colors duration-300" />
                     </Link>
-                    <Link
-                      href="/register"
-                      onClick={closeMenu}
-                      className={`group relative block w-full py-4 px-6 bg-gradient-to-r ${gradients.primary} text-white text-center tracking-[0.2em] uppercase text-[11px] font-medium rounded-xl transition-all duration-500 overflow-hidden`}
-                    >
+                    <Link href="/register" onClick={closeMenu} className={`group relative block w-full py-4 px-6 bg-gradient-to-r ${gradients.primary} text-white text-center tracking-[0.2em] uppercase text-[11px] font-medium rounded-xl transition-all duration-500 overflow-hidden`}>
                       <span className="relative z-10">Crear Cuenta</span>
                       <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                     </Link>
@@ -685,15 +581,7 @@ export default function Navbar() {
               <div className="p-7 border-t border-white/10 bg-slate-900/30">
                 <div className="flex justify-center space-x-6">
                   {socialLinks.map((social) => (
-                    <a
-                      key={social.label}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative text-slate-500 hover:text-sky-400 transition-all duration-300"
-                      aria-label={social.label}
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" className="group relative text-slate-500 hover:text-sky-400 transition-all duration-300" aria-label={social.label} onClick={(e) => e.stopPropagation()}>
                       <span className="absolute inset-0 bg-gradient-to-r from-sky-400/20 via-blue-500/20 to-amber-400/20 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       <FontAwesomeIcon icon={social.icon} className="relative text-lg group-hover:scale-110 transition-transform duration-300" />
                     </a>
@@ -720,16 +608,10 @@ function NavLink({ href, children, scrolled, active, onHover, onLeave }: NavLink
       href={href}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
-      className={`group relative text-[11px] tracking-[0.3em] uppercase font-medium py-3 px-2 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'
-        } hover:text-white`}
+      className={`group relative text-[11px] tracking-[0.3em] uppercase font-medium py-3 px-2 transition-all duration-300 ${scrolled ? 'text-slate-300' : 'text-white'} hover:text-white`}
     >
       {children}
-
-      {/* Underline animado con gradiente nacional */}
-      <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-px bg-gradient-to-r from-sky-400 via-blue-500 to-amber-400 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] ${active ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'
-        }`} />
-
-      {/* Glow sutil debajo */}
+      <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-px bg-gradient-to-r from-sky-400 via-blue-500 to-amber-400 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] ${active ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}`} />
       <span className="absolute inset-x-0 -bottom-1 h-px bg-gradient-to-r from-sky-400/30 via-blue-500/30 to-amber-400/30 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
     </Link>
   );
@@ -746,7 +628,6 @@ function MobileNavLink({ href, children, onClick, index = 0 }: MobileNavLinkProp
       className="group block py-4 px-4 text-slate-300 hover:text-white transition-all duration-300 rounded-xl text-sm tracking-[0.25em] uppercase font-medium relative overflow-hidden animate-fadeInUp"
       style={{ animationDelay: `${index * 50 + 100}ms`, animationFillMode: 'both' }}
     >
-      {/* Indicador de gradiente lateral (Celeste a Dorado) */}
       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-sky-400 via-blue-500 to-amber-400 opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-r-full blur-[1px]" />
       <span className="pl-5 relative flex items-center justify-between">
         {children}

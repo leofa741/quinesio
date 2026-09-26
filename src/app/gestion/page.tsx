@@ -27,7 +27,8 @@ import {
   FaCashRegister,
   FaDumbbell,
   FaFilePrescription,
-  FaBell
+  FaBell,
+  FaBriefcaseMedical
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
@@ -152,6 +153,14 @@ const modules = [
     icon: <FaCog className="text-2xl text-zinc-400" />,
     href: '/gestion/logs',
     roles: ['admin'],
+  },
+   {
+    id: 'especialidades',
+    title: 'Especialidades / Actividades',
+    description: 'Crear, editar y eliminar especialidades kinesiológicas. Se generan páginas automáticas.',
+    icon: <FaBriefcaseMedical className="text-2xl text-zinc-400" />,
+    href: '/admin/especialidades',
+    roles: ['admin', 'profesionales', 'administrativos'],
   },
 ];
 
