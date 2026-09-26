@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/lib/auth'; // ⚠️ Verifica esta ruta
+import { authOptions } from '@/app/lib/auth';
 import cloudinary from '@/app/lib/cloudinary';
 import Especialidad from '@/app/models/Especialidad';
 import connectDB from '@/app/lib/mongoose';
@@ -12,8 +12,12 @@ interface CloudinaryUploadResult {
 }
 
 // ✅ PUT - Actualizar una especialidad (Solo Admin)
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+// ⚠️ Next.js 15: params ahora es una Promesa
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // 1. Resolvemos la promesa de params
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session || (session.user as any).role !== 'admin') {
       return NextResponse.json({ message: 'Acceso denegado' }, { status: 403 });
@@ -48,7 +52,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       updateData.image = (result as CloudinaryUploadResult).secure_url;
     }
 
-    const updatedEspecialidad = await Especialidad.findByIdAndUpdate(params.id, updateData, { new: true, runValidators: true });
+    // 2. Usamos la variable 'id' resuelta
+    const updatedEspecialidad = await Especialidad.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
     if (!updatedEspecialidad) return NextResponse.json({ message: 'Especialidad no encontrada' }, { status: 404 });
 
     return NextResponse.json(updatedEspecialidad);
@@ -59,14 +64,19 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // ✅ DELETE - Eliminar (Soft Delete) una especialidad (Solo Admin)
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+// ⚠️ Next.js 15: params ahora es una Promesa
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // 1. Resolvemos la promesa de params
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session || (session.user as any).role !== 'admin') {
       return NextResponse.json({ message: 'Acceso denegado' }, { status: 403 });
     }
 
-    const deletedEspecialidad = await Especialidad.findByIdAndUpdate(params.id, { isActive: false }, { new: true });
+    // 2. Usamos la variable 'id' resuelta
+    const deletedEspecialidad = await Especialidad.findByIdAndUpdate(id, { isActive: false }, { new: true });
     if (!deletedEspecialidad) return NextResponse.json({ message: 'Especialidad no encontrada' }, { status: 404 });
 
     return NextResponse.json({ message: 'Especialidad eliminada correctamente' });
