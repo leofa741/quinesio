@@ -28,7 +28,8 @@ import {
   FaDumbbell,
   FaFilePrescription,
   FaBell,
-  FaBriefcaseMedical
+  FaBriefcaseMedical,
+  FaClipboardList
 } from 'react-icons/fa';
 import { UserRole } from '../lib/auth';
 import { isPatientRole, isStaffRole } from '../lib/auth-utils';
@@ -154,7 +155,15 @@ const modules = [
     href: '/gestion/logs',
     roles: ['admin'],
   },
-   {
+  {
+    id: 'seguimiento-actividades',
+    title: 'Seguimiento de Actividades',
+    description: 'Registro de sesiones, pacientes atendidos y horas laborales para el cálculo de honorarios.',
+    icon: <FaClipboardList className="text-2xl text-zinc-400" />,
+    href: '/admin/seguimiento-actividades',
+    roles: ['admin', 'profesionales', 'administrativos'],
+  },
+  {
     id: 'especialidades',
     title: 'Especialidades / Actividades',
     description: 'Crear, editar y eliminar especialidades kinesiológicas. Se generan páginas automáticas.',
