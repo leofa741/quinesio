@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get('id');
 
     if (session.user?.role === 'profesionales') {
-      if (id && id !== String(session.user.id)) {
+      if (id && String(id) !== String(session.user.id)) {
         return NextResponse.json({ message: 'No tienes permiso para ver otros perfiles' }, { status: 403 });
       }
       const profesional = await User.findById(session.user.id).select('-password');
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const nuevoProfesional = await User.create({
       name: body.name || '',
       lastName: body.lastName || '',
-      email: (body.email || '').toLowerCase(),
+      email: (body.email || '').toLowerCase().trim(),
       password: await bcrypt.hash(body.password || '123456', 10),
       phone: body.phone || '',
       role: 'profesionales',
@@ -80,7 +80,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, profesional: nuevoProfesional }, { status: 201 });
   } catch (error: any) {
     console.error('❌ Error POST /api/admin/profesionales:', error);
-    // Si es error de validación de Mongoose (ej: email duplicado)
     if (error.code === 11000) {
       return NextResponse.json({ message: 'El email ya está registrado' }, { status: 400 });
     }
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ✅ PUT: Actualizar profesional (BLINDADO)
+// ✅ PUT: Actualizar profesional (CON VALIDACIÓN INTELIGENTE DE EMAIL)
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -98,12 +97,12 @@ export async function PUT(req: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ message: 'ID requerido' }, { status: 400 });
 
-    // 🔒 Seguridad: Comparación segura convirtiendo todo a string
     const sessionUserId = String(session.user?.id || '');
     const userRole = session.user?.role || '';
 
+    // 🔒 Regla de permisos: El profesional solo puede editarse a sí mismo. El admin puede editar a todos.
     if (userRole === 'profesionales' && sessionUserId !== id) {
-      return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
+      return NextResponse.json({ message: 'No autorizado: Solo puedes editar tu propio perfil' }, { status: 403 });
     }
     if (!canManage(userRole) && userRole !== 'profesionales') {
       return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
@@ -111,11 +110,6 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
     
-    // 🔍 LOG para debug: Ver qué datos llegan
-    console.log('📥 PUT profesional - ID:', id);
-    console.log('📥 Body recibido:', JSON.stringify(body, null, 2));
-
-    // 🛡️ BLINDAJE: Procesar arrays de forma segura
     const especialidades = body.especialidades 
       ? String(body.especialidades).split(',').map((e: string) => e.trim()).filter(Boolean) 
       : [];
@@ -123,16 +117,22 @@ export async function PUT(req: NextRequest) {
       ? String(body.horariosAtencion).split(',').map((h: string) => h.trim()).filter(Boolean) 
       : [];
 
-    // 🛡️ BLINDAJE CRÍTICO: Validar y sanitizar email ANTES de usar toLowerCase()
-    const emailSanitizado = body.email 
-      ? String(body.email).trim().toLowerCase() 
-      : '';
-
+    const emailSanitizado = body.email ? String(body.email).trim().toLowerCase() : '';
     if (!emailSanitizado) {
       return NextResponse.json({ message: 'El email es requerido' }, { status: 400 });
     }
 
-    // Construir objeto de actualización de forma segura
+    // 🛡️ VALIDACIÓN INTELIGENTE: Buscamos si el email existe, pero EXCLUYENDO al usuario que estamos editando.
+    // Así evitamos el falso positivo de "email en uso" cuando es el mismo usuario.
+    const emailEnUso = await User.findOne({ 
+      email: emailSanitizado, 
+      _id: { $ne: id } // "$ne" significa "not equal" (diferente de). Ignora al usuario actual.
+    });
+
+    if (emailEnUso) {
+      return NextResponse.json({ message: 'El email ya está en uso por otro profesional' }, { status: 400 });
+    }
+
     const updateData: any = {
       name: body.name || '',
       lastName: body.lastName || '',
@@ -150,7 +150,7 @@ export async function PUT(req: NextRequest) {
       }
     };
 
-    // Solo actualizar la contraseña si viene una nueva (no vacía)
+    // Solo actualizamos la contraseña si se proporcionó una nueva
     if (body.password && String(body.password).trim() !== '') {
       updateData.password = await bcrypt.hash(body.password, 10);
     }
@@ -168,19 +168,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ success: true, profesional: actualizado });
   } catch (error: any) {
     console.error('❌ Error PUT /api/admin/profesionales:', error);
-    
-    // Manejo específico de errores de Mongoose
-    if (error.code === 11000) {
-      return NextResponse.json({ message: 'El email ya está en uso por otro profesional' }, { status: 400 });
-    }
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors || {}).map((e: any) => e.message).join(', ');
-      return NextResponse.json({ message: `Error de validación: ${messages}` }, { status: 400 });
-    }
-    if (error.name === 'CastError') {
-      return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
-    }
-    
     return NextResponse.json({ message: error.message || 'Error al actualizar' }, { status: 500 });
   }
 }
