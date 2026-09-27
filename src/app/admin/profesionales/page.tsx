@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faUserMd, faSearch, faEdit, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faUserMd, faSearch, faEdit, faTrash, faPlus, faLock } from '@fortawesome/free-solid-svg-icons';
 
 interface Profesional {
   _id: string;
@@ -157,69 +157,91 @@ export default function GestionProfesionalesPage() {
             No se encontraron profesionales con ese criterio.
           </div>
         ) : (
-          profesionalesFiltrados.map((prof) => (
-            <div key={prof._id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-sky-500/30 transition-all group flex flex-col">
-              <div className="flex items-start gap-4 mb-4">
-                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
-                  {prof.img ? (
-                    <Image src={prof.img} alt={prof.name} fill className="object-cover" />
+          profesionalesFiltrados.map((prof) => {
+            // 🔒 VALIDACIÓN: ¿Puede este usuario editar a ESTE profesional específico?
+            const canEditThisProfile = canManage || session?.user?.id === prof._id;
+
+            return (
+              <div key={prof._id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-sky-500/30 transition-all group flex flex-col">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
+                    {prof.img ? (
+                      <Image src={prof.img} alt={prof.name} fill className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-600">
+                        <FontAwesomeIcon icon={faUserMd} className="w-8 h-8" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-white truncate">{prof.name} {prof.lastName}</h3>
+                    <p className="text-xs text-sky-400 font-medium mb-1">{prof.matricula || 'Sin matrícula'}</p>
+                    <p className="text-xs text-slate-500 truncate">{prof.email}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {prof.especialidades?.length > 0 ? (
+                    prof.especialidades.map((esp, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-sky-500/10 text-sky-400 text-xs rounded-md border border-sky-500/20">
+                        {esp}
+                      </span>
+                    ))
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-600">
-                      <FontAwesomeIcon icon={faUserMd} className="w-8 h-8" />
-                    </div>
+                    <span className="text-xs text-slate-600 italic">Sin especialidades</span>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-white truncate">{prof.name} {prof.lastName}</h3>
-                  <p className="text-xs text-sky-400 font-medium mb-1">{prof.matricula || 'Sin matrícula'}</p>
-                  <p className="text-xs text-slate-500 truncate">{prof.email}</p>
-                </div>
-              </div>
 
-              <div className="flex flex-wrap gap-2 mb-4">
-                {prof.especialidades?.length > 0 ? (
-                  prof.especialidades.map((esp, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-sky-500/10 text-sky-400 text-xs rounded-md border border-sky-500/20">
-                      {esp}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-slate-600 italic">Sin especialidades</span>
-                )}
-              </div>
-
-              {prof.honorarios?.valorSesion && (
-                <div className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                  <p className="text-xs text-slate-400 mb-1">Honorarios</p>
-                  <p className="text-sm font-semibold text-white">
-                    Sesión ({prof.honorarios.duracionSesion} min): {formatPrice(prof.honorarios.valorSesion, prof.honorarios.moneda)}
-                  </p>
-                  {prof.honorarios.valorEvaluacion && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      Evaluación: {formatPrice(prof.honorarios.valorEvaluacion, prof.honorarios.moneda)}
+                {prof.honorarios?.valorSesion && (
+                  <div className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                    <p className="text-xs text-slate-400 mb-1">Honorarios</p>
+                    <p className="text-sm font-semibold text-white">
+                      Sesión ({prof.honorarios.duracionSesion} min): {formatPrice(prof.honorarios.valorSesion, prof.honorarios.moneda)}
                     </p>
+                    {prof.honorarios.valorEvaluacion && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Evaluación: {formatPrice(prof.honorarios.valorEvaluacion, prof.honorarios.moneda)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-auto flex gap-2 pt-4 border-t border-slate-800">
+                  {/* ✅ BOTÓN DE EDICIÓN INTELIGENTE */}
+                  {canEditThisProfile ? (
+                    <Link 
+                      href={`/admin/profesionales/${prof._id}`}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition"
+                    >
+                      <FontAwesomeIcon icon={faEdit} /> Editar
+                    </Link>
+                  ) : (
+                    <button 
+                      onClick={() => Swal.fire({
+                        icon: 'warning',
+                        title: 'Acceso Restringido',
+                        text: 'Solo el titular de la cuenta o un administrador pueden editar este perfil.',
+                        confirmButtonColor: '#0ea5e9'
+                      })}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-800/50 text-slate-500 rounded-lg text-sm cursor-pointer hover:bg-slate-800 hover:text-slate-400 transition"
+                      title="Solo el titular o un administrador puede editar este perfil"
+                    >
+                      <FontAwesomeIcon icon={faLock} /> Solo Titular
+                    </button>
+                  )}
+                  
+                  {canManage && (
+                    <button 
+                      onClick={() => handleDelete(prof._id)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-sm transition"
+                    >
+                      <FontAwesomeIcon icon={faTrash} /> Eliminar
+                    </button>
                   )}
                 </div>
-              )}
-
-              <div className="mt-auto flex gap-2 pt-4 border-t border-slate-800">
-                <Link 
-                  href={`/admin/profesionales/${prof._id}`}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition"
-                >
-                  <FontAwesomeIcon icon={faEdit} /> Editar
-                </Link>
-                {canManage && (
-                  <button 
-                    onClick={() => handleDelete(prof._id)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-sm transition"
-                  >
-                    <FontAwesomeIcon icon={faTrash} /> Eliminar
-                  </button>
-                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
