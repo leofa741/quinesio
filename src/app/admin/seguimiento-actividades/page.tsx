@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faClipboardList, faPlus, faFilter, faDownload, faClock, faUser, faCalendarDay, faSpinner 
+  faClipboardList, faPlus, faFilter, faDownload, faClock, faUser, faCalendarDay, faSpinner, 
+  faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
+import Link from 'next/link';
 
 interface Actividad {
   _id: string;
@@ -41,6 +43,7 @@ export default function SeguimientoActividadesPage() {
       setLoading(false);
     }
   };
+
 
   const totalMinutos = actividades.reduce((acc, curr) => acc + curr.duracionMinutos, 0);
   const totalHoras = (totalMinutos / 60).toFixed(1);
@@ -116,6 +119,10 @@ export default function SeguimientoActividadesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div className="max-w-7xl mx-auto mt-40">
+
+              <Link href="/gestion" className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 mb-4 transition-colors">
+          <FontAwesomeIcon icon={faArrowLeft} /> Volver al Panel
+        </Link>
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>

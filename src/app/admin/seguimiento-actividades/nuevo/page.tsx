@@ -55,10 +55,9 @@ export default function NuevaActividadPage() {
         fecha: new Date(turnoSeleccionado.fecha).toISOString().split('T')[0],
         duracionMinutos: turnoSeleccionado.duracionMinutos || turnoSeleccionado.duracion || 60,
         tipoSesion: turnoSeleccionado.especialidad || turnoSeleccionado.tipoSesion || 'Rehabilitación',
-        notas: '', // Las notas se dejan en blanco para que el profesional las complete
+        notas: '', 
       });
     } else {
-      // Si selecciona "Ninguno / Manual", limpia los campos
       setFormData(prev => ({ ...prev, turnoId: '', pacienteNombre: '', duracionMinutos: 60 }));
     }
   };
@@ -84,11 +83,12 @@ export default function NuevaActividadPage() {
       });
 
       if (res.ok) {
+        // ✅ ÚNICO CAMBIO: Mensaje de éxito más descriptivo
         Swal.fire({
           icon: 'success',
-          title: '¡Actividad Registrada!',
-          text: 'La sesión se vinculó correctamente al turno.',
-          timer: 1500,
+          title: '¡Actividad y Pago Registrados!',
+          text: 'La sesión se guardó y los montos del turno se actualizaron automáticamente en el módulo de Pagos.',
+          timer: 2500,
           showConfirmButton: false
         });
         router.push('/admin/seguimiento-actividades');
@@ -113,7 +113,7 @@ export default function NuevaActividadPage() {
           </button>
           <div>
             <h1 className="text-3xl font-bold text-white">Registrar Actividad</h1>
-            <p className="text-slate-400">Vincula un turno atendido para registrar la sesión automáticamente</p>
+            <p className="text-slate-400">Vincula un turno atendido para registrar la sesión y liquidar automáticamente</p>
           </div>
         </div>
 
@@ -138,7 +138,7 @@ export default function NuevaActividadPage() {
               <option value="manual">-- Ingreso manual (sin turno previo) --</option>
             </select>
             <p className="text-xs text-slate-400 mt-2">
-              * Al seleccionar un turno, los datos del paciente, fecha y duración se completarán automáticamente.
+              * Al seleccionar un turno, los datos se completarán y el sistema calculará los honorarios automáticamente.
             </p>
           </div>
 
@@ -227,7 +227,7 @@ export default function NuevaActividadPage() {
               value={formData.notas}
               onChange={handleChange}
               rows={3}
-              placeholder="Evolución, ejercicios indicados o observaciones relevantes..."
+              placeholder="Evolución, ejercicios indicados u observaciones..."
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all resize-none"
             />
           </div>
@@ -242,7 +242,7 @@ export default function NuevaActividadPage() {
               className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl hover:shadow-lg hover:shadow-sky-500/50 transition-all font-medium disabled:opacity-50"
             >
               <FontAwesomeIcon icon={loading ? faSpinner : faSave} className={loading ? 'animate-spin' : ''} />
-              {loading ? 'Guardando...' : 'Confirmar y Registrar'}
+              {loading ? 'Procesando...' : 'Confirmar y Registrar'}
             </button>
           </div>
         </form>

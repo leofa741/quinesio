@@ -121,7 +121,7 @@ export default function PagosPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mt-40 mx-auto">
+      <div className="max-w-7xl mt-50 mx-auto">
             <button 
                 onClick={() => router.push('/gestion')} 
                 className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
@@ -164,6 +164,7 @@ export default function PagosPage() {
             </div>
           </div>
         </div>
+
 
         {/* ✅ FILTROS (Ahora con profesionales dinámicos) */}
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end">
