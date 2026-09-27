@@ -7,10 +7,9 @@ import bcrypt from 'bcryptjs';
 
 connectDB();
 
-// Helper para verificar permisos de gestión
 const canManage = (role: string) => ['admin', 'administrativos'].includes(role);
 
-// ✅ GET: Obtener profesionales (Corregido para que los pacientes puedan ver la lista)
+// ✅ GET
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,23 +18,20 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    // 1. Si es un PROFESIONAL, solo puede ver su propio perfil (por seguridad)
     if (session.user?.role === 'profesionales') {
-      if (id && id !== session.user.id) {
+      if (id && id !== String(session.user.id)) {
         return NextResponse.json({ message: 'No tienes permiso para ver otros perfiles' }, { status: 403 });
       }
       const profesional = await User.findById(session.user.id).select('-password');
       return NextResponse.json({ success: true, profesionales: [profesional] });
     }
 
-    // 2. ADMIN, ADMINISTRATIVO y PACIENTES pueden ver la lista completa de profesionales ACTIVOS
-    // para poder agendar turnos con ellos.
     const profesionales = await User.find({ 
       role: 'profesionales',
-      activo: true // Solo mostramos profesionales que están activos
+      activo: true 
     })
     .select('-password')
-    .sort({ name: 1, lastName: 1 }); // Ordenados alfabéticamente
+    .sort({ name: 1, lastName: 1 });
 
     return NextResponse.json({ success: true, profesionales });
   } catch (error) {
@@ -44,7 +40,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ✅ POST: Crear nuevo profesional (Solo Admin/Administrativo)
+// ✅ POST
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -54,21 +50,24 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     
-    // Procesar arrays desde strings separados por coma
-    const especialidades = body.especialidades ? body.especialidades.split(',').map((e: string) => e.trim()).filter(Boolean) : [];
-    const horariosAtencion = body.horariosAtencion ? body.horariosAtencion.split(',').map((h: string) => h.trim()).filter(Boolean) : [];
+    const especialidades = body.especialidades 
+      ? String(body.especialidades).split(',').map((e: string) => e.trim()).filter(Boolean) 
+      : [];
+    const horariosAtencion = body.horariosAtencion 
+      ? String(body.horariosAtencion).split(',').map((h: string) => h.trim()).filter(Boolean) 
+      : [];
 
     const nuevoProfesional = await User.create({
-      name: body.name,
-      lastName: body.lastName,
-      email: body.email.toLowerCase(),
+      name: body.name || '',
+      lastName: body.lastName || '',
+      email: (body.email || '').toLowerCase(),
       password: await bcrypt.hash(body.password || '123456', 10),
-      phone: body.phone,
+      phone: body.phone || '',
       role: 'profesionales',
       activo: true,
-      matricula: body.matricula,
+      matricula: body.matricula || '',
       especialidades,
-      descripcionProfesional: body.descripcionProfesional,
+      descripcionProfesional: body.descripcionProfesional || '',
       horariosAtencion,
       honorarios: {
         valorSesion: Number(body.honorarios?.valorSesion) || 0,
@@ -79,13 +78,17 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, profesional: nuevoProfesional }, { status: 201 });
-  } catch (error) {
-    console.error('Error POST /api/admin/profesionales:', error);
-    return NextResponse.json({ message: 'Error al crear profesional' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ Error POST /api/admin/profesionales:', error);
+    // Si es error de validación de Mongoose (ej: email duplicado)
+    if (error.code === 11000) {
+      return NextResponse.json({ message: 'El email ya está registrado' }, { status: 400 });
+    }
+    return NextResponse.json({ message: error.message || 'Error al crear profesional' }, { status: 500 });
   }
 }
 
-// ✅ PUT: Actualizar profesional
+// ✅ PUT: Actualizar profesional (BLINDADO)
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -95,47 +98,94 @@ export async function PUT(req: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ message: 'ID requerido' }, { status: 400 });
 
-    // Seguridad: Un profesional solo puede editar su propio perfil
-    if (session.user?.role === 'profesionales' && session.user.id !== id) {
+    // 🔒 Seguridad: Comparación segura convirtiendo todo a string
+    const sessionUserId = String(session.user?.id || '');
+    const userRole = session.user?.role || '';
+
+    if (userRole === 'profesionales' && sessionUserId !== id) {
       return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
     }
-    if (!canManage(session.user?.role || '') && session.user?.role !== 'profesionales') {
+    if (!canManage(userRole) && userRole !== 'profesionales') {
       return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
     }
 
     const body = await req.json();
-    const especialidades = body.especialidades ? body.especialidades.split(',').map((e: string) => e.trim()).filter(Boolean) : [];
-    const horariosAtencion = body.horariosAtencion ? body.horariosAtencion.split(',').map((h: string) => h.trim()).filter(Boolean) : [];
+    
+    // 🔍 LOG para debug: Ver qué datos llegan
+    console.log('📥 PUT profesional - ID:', id);
+    console.log('📥 Body recibido:', JSON.stringify(body, null, 2));
+
+    // 🛡️ BLINDAJE: Procesar arrays de forma segura
+    const especialidades = body.especialidades 
+      ? String(body.especialidades).split(',').map((e: string) => e.trim()).filter(Boolean) 
+      : [];
+    const horariosAtencion = body.horariosAtencion 
+      ? String(body.horariosAtencion).split(',').map((h: string) => h.trim()).filter(Boolean) 
+      : [];
+
+    // 🛡️ BLINDAJE CRÍTICO: Validar y sanitizar email ANTES de usar toLowerCase()
+    const emailSanitizado = body.email 
+      ? String(body.email).trim().toLowerCase() 
+      : '';
+
+    if (!emailSanitizado) {
+      return NextResponse.json({ message: 'El email es requerido' }, { status: 400 });
+    }
+
+    // Construir objeto de actualización de forma segura
+    const updateData: any = {
+      name: body.name || '',
+      lastName: body.lastName || '',
+      email: emailSanitizado,
+      phone: body.phone || '',
+      matricula: body.matricula || '',
+      especialidades,
+      descripcionProfesional: body.descripcionProfesional || '',
+      horariosAtencion,
+      honorarios: {
+        valorSesion: Number(body.honorarios?.valorSesion) || 0,
+        valorEvaluacion: Number(body.honorarios?.valorEvaluacion) || 0,
+        duracionSesion: Number(body.honorarios?.duracionSesion) || 60,
+        moneda: body.honorarios?.moneda || 'ARS'
+      }
+    };
+
+    // Solo actualizar la contraseña si viene una nueva (no vacía)
+    if (body.password && String(body.password).trim() !== '') {
+      updateData.password = await bcrypt.hash(body.password, 10);
+    }
 
     const actualizado = await User.findByIdAndUpdate(
       id,
-      {
-        name: body.name,
-        lastName: body.lastName,
-        email: body.email.toLowerCase(),
-        phone: body.phone,
-        matricula: body.matricula,
-        especialidades,
-        descripcionProfesional: body.descripcionProfesional,
-        horariosAtencion,
-        honorarios: {
-          valorSesion: Number(body.honorarios?.valorSesion) || 0,
-          valorEvaluacion: Number(body.honorarios?.valorEvaluacion) || 0,
-          duracionSesion: Number(body.honorarios?.duracionSesion) || 60,
-          moneda: body.honorarios?.moneda || 'ARS'
-        }
-      },
-      { new: true }
+      updateData,
+      { new: true, runValidators: true }
     ).select('-password');
 
+    if (!actualizado) {
+      return NextResponse.json({ message: 'Profesional no encontrado' }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, profesional: actualizado });
-  } catch (error) {
-    console.error('Error PUT /api/admin/profesionales:', error);
-    return NextResponse.json({ message: 'Error al actualizar' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ Error PUT /api/admin/profesionales:', error);
+    
+    // Manejo específico de errores de Mongoose
+    if (error.code === 11000) {
+      return NextResponse.json({ message: 'El email ya está en uso por otro profesional' }, { status: 400 });
+    }
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors || {}).map((e: any) => e.message).join(', ');
+      return NextResponse.json({ message: `Error de validación: ${messages}` }, { status: 400 });
+    }
+    if (error.name === 'CastError') {
+      return NextResponse.json({ message: 'ID inválido' }, { status: 400 });
+    }
+    
+    return NextResponse.json({ message: error.message || 'Error al actualizar' }, { status: 500 });
   }
 }
 
-// ✅ DELETE: Eliminar profesional (Solo Admin)
+// ✅ DELETE
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
