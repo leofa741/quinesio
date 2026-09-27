@@ -18,26 +18,20 @@ export default function PagosPage() {
   const [turnos, setTurnos] = useState<any[]>([]);
   const [resumen, setResumen] = useState({ porCobrar: 0, porPagar: 0 });
   const [loading, setLoading] = useState(true);
-  
-  // ✅ NUEVO ESTADO: Para guardar la lista de profesionales
   const [profesionales, setProfesionales] = useState<any[]>([]);
   
-  // Filtros
   const [filtroProf, setFiltroProf] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('pendiente'); // 'pendiente' | 'todos'
+  const [filtroEstado, setFiltroEstado] = useState('pendiente');
 
-  // Edición inline
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
 
-  // ✅ Cargar profesionales al autenticar
   useEffect(() => {
     if (status === 'authenticated') {
       fetchProfesionales();
     }
   }, [status]);
 
-  // ✅ Cargar pagos cuando cambian los filtros o al autenticar
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login?callbackUrl=/admin/pagos');
@@ -82,8 +76,10 @@ export default function PagosPage() {
   const startEditing = (turno: any) => {
     setEditingId(turno._id);
     setEditData({
-      montoTotal: turno.montoTotal || turno.profesional?.honorarios?.valorSesion || 0,
-      montoProfesional: turno.montoProfesional || Math.round((turno.profesional?.honorarios?.valorSesion || 0) * 0.7), // Ej: 70%
+      // 🔑 SOLUCIÓN: Usamos estrictamente lo que ya está guardado en el turno.
+      // Sin cálculos de fallback que puedan alterar el valor.
+      montoTotal: turno.montoTotal || 0,
+      montoProfesional: turno.montoProfesional || 0,
       estadoPagoPaciente: turno.estadoPagoPaciente || 'pendiente',
       estadoPagoProfesional: turno.estadoPagoProfesional || 'pendiente',
       metodoPago: turno.metodoPago || 'efectivo',
@@ -102,7 +98,7 @@ export default function PagosPage() {
       if (res.ok) {
         toast.success('✅ Estado de pago actualizado');
         setEditingId(null);
-        fetchPagos(); // Recargar
+        fetchPagos();
       } else {
         toast.error(data.message || 'Error al guardar');
       }
@@ -121,14 +117,15 @@ export default function PagosPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mt-50 mx-auto">
-            <button 
-                onClick={() => router.push('/gestion')} 
-                className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
-              >
-                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
-                Volver al Panel Principal
-              </button>
+      <div className="max-w-7xl mt-40 mx-auto">
+        <button 
+          onClick={() => router.push('/gestion')} 
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+        >
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+          Volver al Panel Principal
+        </button>
+        
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -139,7 +136,6 @@ export default function PagosPage() {
           </div>
         </div>
 
-        {/* ✅ TARJETAS DE RESUMEN */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center justify-between">
             <div>
@@ -165,8 +161,6 @@ export default function PagosPage() {
           </div>
         </div>
 
-
-        {/* ✅ FILTROS (Ahora con profesionales dinámicos) */}
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[250px]">
             <label className="block text-xs text-slate-400 mb-1">Filtrar por Profesional</label>
@@ -196,7 +190,6 @@ export default function PagosPage() {
           </div>
         </div>
 
-        {/* ✅ TABLA DE LIQUIDACIONES */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -241,7 +234,6 @@ export default function PagosPage() {
                           </span>
                         </td>
                         
-                        {/* Columna de Montos (Editable) */}
                         <td className="px-6 py-4 text-right">
                           {isEditing ? (
                             <div className="flex flex-col gap-1 items-end">
@@ -268,7 +260,6 @@ export default function PagosPage() {
                           )}
                         </td>
 
-                        {/* Estados (Editables) */}
                         <td className="px-6 py-4 text-center">
                           {isEditing ? (
                             <select 
@@ -309,7 +300,6 @@ export default function PagosPage() {
                           )}
                         </td>
 
-                        {/* Acciones */}
                         <td className="px-6 py-4 text-right">
                           {isEditing ? (
                             <div className="flex justify-end gap-2">
