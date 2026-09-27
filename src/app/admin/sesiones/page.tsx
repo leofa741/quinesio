@@ -13,8 +13,8 @@ import { FaArrowLeft } from 'react-icons/fa';
 
 interface Plan {
   _id: string;
-  paciente: { _id: string; name: string; lastName: string };
-  profesional: { _id: string; name: string; lastName: string };
+  paciente: any; // Puede ser objeto o string (ID) si falla el populate
+  profesional: any;
   diagnostico: string;
   objetivo: string;
   totalSesiones: number;
@@ -40,7 +40,6 @@ export default function SesionesPage() {
   const [planes, setPlanes] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Estado para el historial clínico
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [historial, setHistorial] = useState<NotaSesion[]>([]);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
@@ -50,23 +49,33 @@ export default function SesionesPage() {
       router.push('/login?callbackUrl=/admin/sesiones');
       return;
     }
-    if (status === 'authenticated') fetchPlanes();
+    if (status === 'authenticated') {
+      fetchPlanes();
+    }
   }, [status, router]);
 
-  // ✅ CORREGIDO: Llamamos sin parámetros. La API decidirá qué mostrar según tu rol.
   const fetchPlanes = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/planes');
+      
+      // ✅ BLINDAJE 1: Verificar que la respuesta sea exitosa antes de parsear JSON
+      if (!res.ok) {
+        throw new Error(`Error del servidor: ${res.status}`);
+      }
+      
       const data = await res.json();
+      
       if (data.success) {
-        // La API ya filtra por estado 'activo', así que solo asignamos el array
         setPlanes(data.planes || []);
       } else {
         toast.error(data.message || 'Error al cargar los planes');
+        setPlanes([]);
       }
     } catch (error) {
-      toast.error('Error de conexión al cargar los planes');
+      console.error('Error al cargar planes:', error);
+      toast.error('Error de conexión. Verifica que la base de datos esté disponible.');
+      setPlanes([]);
     } finally {
       setLoading(false);
     }
@@ -77,17 +86,30 @@ export default function SesionesPage() {
     setLoadingHistorial(true);
     try {
       const res = await fetch(`/api/sesiones?planId=${plan._id}`);
+      if (!res.ok) throw new Error('Error en la respuesta');
+      
       const data = await res.json();
       if (data.success) {
-        // Ordenar sesiones por número de sesión (de la más reciente a la más antigua)
-        const sesionesOrdenadas = data.sesiones.sort((a: NotaSesion, b: NotaSesion) => b.numeroSesion - a.numeroSesion);
+        // ✅ BLINDAJE 2: Asegurar que data.sesiones sea un array antes de ordenar
+        const sesionesArray = Array.isArray(data.sesiones) ? data.sesiones : [];
+        const sesionesOrdenadas = sesionesArray.sort((a: NotaSesion, b: NotaSesion) => b.numeroSesion - a.numeroSesion);
         setHistorial(sesionesOrdenadas);
+      } else {
+        setHistorial([]);
       }
     } catch (error) {
+      console.error('Error al cargar el historial:', error);
       toast.error('Error al cargar el historial');
+      setHistorial([]);
     } finally {
       setLoadingHistorial(false);
     }
+  };
+
+  // ✅ BLINDAJE 3: Función segura para obtener nombres (evita "Cannot read properties of null")
+  const getNombreCompleto = (persona: any, tipo: string) => {
+    if (!persona || typeof persona !== 'object') return `${tipo} (No disponible)`;
+    return `${persona.name || ''} ${persona.lastName || ''}`.trim() || `${tipo} (Sin nombre)`;
   };
 
   if (status === 'loading' || loading) {
@@ -101,13 +123,14 @@ export default function SesionesPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-6xl mt-40 mx-auto">
-            <button 
-                onClick={() => router.push('/gestion')} 
-                className="inline-flex  mt-40 items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
-              >
-                <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
-                Volver al Panel Principal
-              </button>
+        <button 
+          onClick={() => router.push('/gestion')} 
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+        >
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+          Volver al Panel Principal
+        </button>
+        
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -123,35 +146,43 @@ export default function SesionesPage() {
             <div className="col-span-full bg-slate-900/50 border border-slate-800 rounded-xl p-12 text-center">
               <FontAwesomeIcon icon={faUserInjured} className="w-12 h-12 text-slate-600 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-2">No hay planes activos</h3>
-              <p className="text-slate-400">Los planes se crean automáticamente al registrar la primera sesión de un paciente desde el calendario.</p>
+              <p className="text-slate-400">Los planes se crean automáticamente al registrar la primera sesión de un paciente.</p>
             </div>
           ) : (
             planes.map((plan) => {
-              const porcentaje = Math.round((plan.sesionesCompletadas / plan.totalSesiones) * 100);
+              // ✅ BLINDAJE 4: Evitar división por cero o NaN
+              const total = plan.totalSesiones || 1;
+              const completadas = plan.sesionesCompletadas || 0;
+              const porcentaje = Math.min(100, Math.round((completadas / total) * 100));
+
               return (
                 <div key={plan._id} className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-sky-500/30 transition-all">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-lg font-bold text-white">{plan.paciente.name} {plan.paciente.lastName}</h3>
-                      <p className="text-sm text-sky-400">{plan.diagnostico}</p>
-                      {/* ✅ NUEVO: Mostrar el profesional a cargo (muy útil para el Admin) */}
+                      <h3 className="text-lg font-bold text-white">
+                        {getNombreCompleto(plan.paciente, 'Paciente')}
+                      </h3>
+                      <p className="text-sm text-sky-400">{plan.diagnostico || 'Sin diagnóstico'}</p>
                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                         <FontAwesomeIcon icon={faUserMd} className="w-3 h-3" /> 
-                        {plan.profesional.name} {plan.profesional.lastName}
+                        {getNombreCompleto(plan.profesional, 'Profesional')}
                       </p>
                     </div>
                     <span className="px-2 py-1 bg-sky-500/20 text-sky-400 text-xs font-medium rounded-full border border-sky-500/30">
-                      Activo
+                      {plan.estado || 'Activo'}
                     </span>
                   </div>
 
                   <div className="mb-4">
                     <div className="flex justify-between text-xs text-slate-400 mb-1">
                       <span>Progreso</span>
-                      <span>{plan.sesionesCompletadas} / {plan.totalSesiones} sesiones ({porcentaje}%)</span>
+                      <span>{completadas} / {total} sesiones ({porcentaje}%)</span>
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-2">
-                      <div className="bg-sky-500 h-2 rounded-full transition-all" style={{ width: `${porcentaje}%` }}></div>
+                      <div 
+                        className="bg-sky-500 h-2 rounded-full transition-all" 
+                        style={{ width: `${porcentaje}%` }}
+                      ></div>
                     </div>
                   </div>
 
@@ -181,11 +212,14 @@ export default function SesionesPage() {
                   Historial de Tratamiento
                 </h2>
                 <p className="text-slate-400 text-sm mt-1">
-                  {selectedPlan.paciente.name} {selectedPlan.paciente.lastName} • {selectedPlan.diagnostico}
+                  {getNombreCompleto(selectedPlan.paciente, 'Paciente')} • {selectedPlan.diagnostico || 'Sin diagnóstico'}
                 </p>
               </div>
-              <button onClick={() => { setSelectedPlan(null); setHistorial([]); }} className="text-slate-400 hover:text-white transition">
-                <FontAwesomeIcon icon={faTimes} className="w-6 h-6" />
+              <button 
+                onClick={() => { setSelectedPlan(null); setHistorial([]); }} 
+                className="text-slate-400 hover:text-white transition p-2 hover:bg-slate-800 rounded-lg"
+              >
+                <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
               </button>
             </div>
 
@@ -200,7 +234,6 @@ export default function SesionesPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Resumen del Plan */}
                 <div className="bg-sky-500/10 border border-sky-500/30 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-xs text-sky-400 uppercase tracking-wider mb-1">Objetivo</p>
@@ -208,17 +241,18 @@ export default function SesionesPage() {
                   </div>
                   <div>
                     <p className="text-xs text-sky-400 uppercase tracking-wider mb-1">Inicio del Tratamiento</p>
-                    <p className="text-white font-medium">{new Date(selectedPlan.fechaInicio).toLocaleDateString('es-AR')}</p>
+                    <p className="text-white font-medium">
+                      {selectedPlan.fechaInicio ? new Date(selectedPlan.fechaInicio).toLocaleDateString('es-AR') : 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-sky-400 uppercase tracking-wider mb-1">Progreso Total</p>
                     <p className="text-white font-medium">
-                      {selectedPlan.sesionesCompletadas} de {selectedPlan.totalSesiones} sesiones completadas
+                      {selectedPlan.sesionesCompletadas || 0} de {selectedPlan.totalSesiones || 0} sesiones
                     </p>
                   </div>
                 </div>
 
-                {/* Línea de Tiempo de Sesiones */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     <FontAwesomeIcon icon={faCalendarDay} className="text-sky-500" />
@@ -227,7 +261,6 @@ export default function SesionesPage() {
                   
                   {historial.map((nota) => (
                     <div key={nota._id} className="bg-slate-800/50 border border-slate-700 rounded-xl p-5 relative">
-                      {/* Indicador de número de sesión */}
                       <div className="absolute -left-3 top-6 w-6 h-6 bg-sky-600 rounded-full flex items-center justify-center text-xs font-bold text-white border-4 border-slate-900">
                         {nota.numeroSesion}
                       </div>
@@ -258,12 +291,12 @@ export default function SesionesPage() {
                       <div className="pl-4 space-y-3">
                         <div>
                           <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Técnicas Aplicadas</p>
-                          <p className="text-slate-200 text-sm">{nota.tecnicasAplicadas}</p>
+                          <p className="text-slate-200 text-sm">{nota.tecnicasAplicadas || 'No registradas'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Evolución y Notas Clínicas</p>
                           <p className="text-slate-200 text-sm bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 whitespace-pre-wrap">
-                            {nota.evolucion}
+                            {nota.evolucion || 'Sin observaciones'}
                           </p>
                         </div>
                         {nota.proximosPasos && (
