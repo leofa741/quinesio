@@ -9,7 +9,7 @@ connectDB();
 
 const canManage = (role: string) => ['admin', 'administrativos'].includes(role);
 
-// ✅ GET
+// ✅ GET: Obtener profesionales (CORREGIDO para buscar por ID específico)
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,17 +18,32 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    if (session.user?.role === 'profesionales') {
-      if (id && String(id) !== String(session.user.id)) {
+    // 1. Si se solicita un ID específico, lo buscamos DIRECTAMENTE
+    if (id) {
+      // Un profesional solo puede ver su propio perfil
+      if (session.user?.role === 'profesionales' && String(session.user.id) !== String(id)) {
         return NextResponse.json({ message: 'No tienes permiso para ver otros perfiles' }, { status: 403 });
       }
-      const profesional = await User.findById(session.user.id).select('-password');
+      
+      const profesional = await User.findById(id).select('-password');
+      if (!profesional) {
+        return NextResponse.json({ message: 'Profesional no encontrado' }, { status: 404 });
+      }
       return NextResponse.json({ success: true, profesionales: [profesional] });
     }
 
+    // 2. Si NO hay ID, devolvemos la lista
+    if (session.user?.role === 'profesionales') {
+      const profesional = await User.findById(session.user.id).select('-password');
+      return NextResponse.json({ success: true, profesionales: profesional ? [profesional] : [] });
+    }
+
+    // Admin ve todos los profesionales, Y TAMBIÉN a los admins que tengan datos de profesional (matrícula)
     const profesionales = await User.find({ 
-      role: 'profesionales',
-      activo: true 
+      $or: [
+        { role: 'profesionales', activo: true },
+        { role: 'admin', matricula: { $exists: true, $ne: '' } } 
+      ]
     })
     .select('-password')
     .sort({ name: 1, lastName: 1 });
@@ -40,7 +55,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ✅ POST
+// ✅ POST: Crear nuevo profesional O actualizar el actual si es el mismo email (Para Admins que también son profesionales)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -49,7 +64,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    
+    const emailLower = (body.email || '').toLowerCase().trim();
+
     const especialidades = body.especialidades 
       ? String(body.especialidades).split(',').map((e: string) => e.trim()).filter(Boolean) 
       : [];
@@ -57,14 +73,7 @@ export async function POST(req: NextRequest) {
       ? String(body.horariosAtencion).split(',').map((h: string) => h.trim()).filter(Boolean) 
       : [];
 
-    const nuevoProfesional = await User.create({
-      name: body.name || '',
-      lastName: body.lastName || '',
-      email: (body.email || '').toLowerCase().trim(),
-      password: await bcrypt.hash(body.password || '123456', 10),
-      phone: body.phone || '',
-      role: 'profesionales',
-      activo: true,
+    const datosProfesional = {
       matricula: body.matricula || '',
       especialidades,
       descripcionProfesional: body.descripcionProfesional || '',
@@ -74,20 +83,48 @@ export async function POST(req: NextRequest) {
         valorEvaluacion: Number(body.honorarios?.valorEvaluacion) || 0,
         duracionSesion: Number(body.honorarios?.duracionSesion) || 60,
         moneda: body.honorarios?.moneda || 'ARS'
-      }
+      },
+      activo: true
+    };
+
+    // 🔍 Verificar si el email ya existe en la base de datos
+    const usuarioExistente = await User.findOne({ email: emailLower });
+
+    if (usuarioExistente) {
+      // 🛠️ SOLUCIÓN 1: Si ya existe, ACTUALIZAMOS ese usuario agregándole los campos de profesional.
+      // Esto permite que un Admin se agregue a sí mismo como profesional sin duplicar el correo.
+      const actualizado = await User.findByIdAndUpdate(
+        usuarioExistente._id,
+        { $set: datosProfesional },
+        { new: true }
+      ).select('-password');
+
+      return NextResponse.json({ 
+        success: true, 
+        profesional: actualizado, 
+        message: 'Datos de profesional agregados a tu cuenta existente' 
+      }, { status: 200 });
+    }
+
+    // Si no existe, creamos un nuevo usuario profesional normalmente
+    const nuevoProfesional = await User.create({
+      name: body.name || '',
+      lastName: body.lastName || '',
+      email: emailLower,
+      password: await bcrypt.hash(body.password || '123456', 10),
+      phone: body.phone || '',
+      role: 'profesionales',
+      ...datosProfesional
     });
 
     return NextResponse.json({ success: true, profesional: nuevoProfesional }, { status: 201 });
   } catch (error: any) {
     console.error('❌ Error POST /api/admin/profesionales:', error);
-    if (error.code === 11000) {
-      return NextResponse.json({ message: 'El email ya está registrado' }, { status: 400 });
-    }
-    return NextResponse.json({ message: error.message || 'Error al crear profesional' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'Error al procesar profesional' }, { status: 500 });
   }
 }
 
-// ✅ PUT: Actualizar profesional (CON VALIDACIÓN INTELIGENTE DE EMAIL)
+// ✅ PUT: Actualizar profesional
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -100,7 +137,6 @@ export async function PUT(req: NextRequest) {
     const sessionUserId = String(session.user?.id || '');
     const userRole = session.user?.role || '';
 
-    // 🔒 Regla de permisos: El profesional solo puede editarse a sí mismo. El admin puede editar a todos.
     if (userRole === 'profesionales' && sessionUserId !== id) {
       return NextResponse.json({ message: 'No autorizado: Solo puedes editar tu propio perfil' }, { status: 403 });
     }
@@ -122,11 +158,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ message: 'El email es requerido' }, { status: 400 });
     }
 
-    // 🛡️ VALIDACIÓN INTELIGENTE: Buscamos si el email existe, pero EXCLUYENDO al usuario que estamos editando.
-    // Así evitamos el falso positivo de "email en uso" cuando es el mismo usuario.
+    // Validación inteligente de email (ignora al usuario actual)
     const emailEnUso = await User.findOne({ 
       email: emailSanitizado, 
-      _id: { $ne: id } // "$ne" significa "not equal" (diferente de). Ignora al usuario actual.
+      _id: { $ne: id }
     });
 
     if (emailEnUso) {
@@ -150,7 +185,6 @@ export async function PUT(req: NextRequest) {
       }
     };
 
-    // Solo actualizamos la contraseña si se proporcionó una nueva
     if (body.password && String(body.password).trim() !== '') {
       updateData.password = await bcrypt.hash(body.password, 10);
     }
@@ -172,7 +206,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// ✅ DELETE
+// ✅ DELETE: Eliminar profesional
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
