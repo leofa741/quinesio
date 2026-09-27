@@ -6,6 +6,7 @@ import { getSession } from 'next-auth/react'; // ⚠️ IMPORTANTE: Usamos getSe
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faTrash, faEye } from '@fortawesome/free-solid-svg-icons';
 import Swal from 'sweetalert2';
+import { FaArrowLeft } from 'react-icons/fa';
 
 interface Especialidad {
     _id: string;
@@ -101,6 +102,13 @@ export default function EspecialidadesPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
             <div className="max-w-7xl mt-40 mx-auto">
+                       <button 
+                          onClick={() => router.push('/gestion')} 
+                          className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+                        >
+                          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+                          Volver al Panel Principal
+                        </button>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2">Gestión de Especialidades</h1>
