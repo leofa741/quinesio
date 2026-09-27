@@ -106,15 +106,6 @@ const modules = [
     href: '/admin/pagos',
     roles: ['admin', 'administrativos'],
   },
-
-  {
-    id: 'reportes',
-    title: 'Reportes y Estadísticas',
-    description: 'Turnos por profesional, ingresos, sesiones restantes y más.',
-    icon: <FaChartBar className="text-2xl text-zinc-400" />,
-    href: '/admin/reportes',
-    roles: ['admin', 'administrativos'],
-  },
   {
     id: 'ejercicios',
     title: 'Planes de Ejercicios',
