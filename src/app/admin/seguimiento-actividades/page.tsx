@@ -10,6 +10,7 @@ import {
 import Swal from 'sweetalert2';
 import Link from 'next/link';
 
+
 interface Actividad {
   _id: string;
   profesionalNombre: string;

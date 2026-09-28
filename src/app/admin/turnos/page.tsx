@@ -13,10 +13,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle,
   faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faUserMd,
-  faNotesMedical, faImage, faChartLine, faPlusCircle
+  faNotesMedical, faImage, faChartLine, faPlusCircle, faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 import { FaArrowLeft } from 'react-icons/fa';
 import PlantillasClinicas from '@/app/components/plantillaclinica/PlantillasClinicas';
+
 
 interface Profesional {
   _id: string;
@@ -504,15 +505,65 @@ export default function AgendaTurnosPage() {
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-xl fc-theme-dark">
-          <FullCalendar ref={calendarRef} plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} initialView="timeGridWeek"
-            headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' }} locale="es"
-            slotMinTime="08:00:00" slotMaxTime="20:00:00" allDaySlot={false} selectable={true} select={handleDateSelect}
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth' }}
+            locale="es"
+            slotMinTime="08:00:00"
+            slotMaxTime="20:00:00"
+            allDaySlot={false}
+            selectable={true}
+            select={handleDateSelect}
             events={filteredEvents}
             datesSet={(dateInfo) => {
               setViewDates({ start: dateInfo.start.toISOString(), end: dateInfo.end.toISOString() });
               fetchEvents(dateInfo.start.toISOString(), dateInfo.end.toISOString());
             }}
-            eventClick={handleEventClick} height="auto" />
+            eventClick={handleEventClick}
+            height="auto"
+
+            // ✅ NUEVA PROPIEDAD: Renderizado personalizado del contenido del evento
+            eventContent={(arg) => {
+              const tieneActividad = arg.event.extendedProps.tieneActividad;
+              const estado = arg.event.extendedProps.estado;
+              const turnoId = arg.event.id;
+
+              // Condición: Turno confirmado/completado Y sin actividad registrada
+              const necesitaRegistro = (estado === 'confirmado' || estado === 'completado') && !tieneActividad;
+
+              return (
+                <div className="flex items-center gap-2 px-2 py-1 h-full text-white overflow-hidden">
+
+                  {/* 1. Indicador visual compacto (Icono o punto decorativo) */}
+                  {necesitaRegistro ? (
+                    <a
+                      href={`/admin/seguimiento-actividades/nuevo?turnoId=${turnoId}`}
+                      onClick={(e) => e.stopPropagation()} // Evita que se abra el modal al hacer clic en el icono
+                      className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-amber-500/20 border border-amber-400/50 rounded hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all cursor-pointer"
+                      title="⚠️ Click para registrar la actividad clínica y honorarios de este turno"
+                    >
+                      <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    // Un pequeño punto decorativo para mantener la alineación visual cuando todo está en regla
+                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-white/40"></span>
+                  )}
+
+                  {/* 2. Texto del evento (Siempre legible y sin aplastarse) */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-medium truncate leading-tight opacity-90">
+                      {arg.timeText}
+                    </div>
+                    <div className="text-xs font-semibold truncate leading-tight">
+                      {arg.event.title}
+                    </div>
+                  </div>
+                </div>
+              );
+            }}
+          />
         </div>
       </div>
 

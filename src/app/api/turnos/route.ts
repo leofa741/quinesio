@@ -6,6 +6,7 @@ import Turno from '@/app/models/Turno';
 import User from '@/app/models/User';
 import { v2 as cloudinary } from 'cloudinary';
 import { sendAppointmentEmails } from '@/app/lib/email';
+import Actividad from '@/app/models/Actividad';
 
 // Configuración de Cloudinary
 cloudinary.config({
@@ -28,7 +29,7 @@ async function uploadToCloudinary(file: File, folder: string) {
   return result.secure_url;
 }
 
-// ✅ GET: Obtener turnos
+// ✅ GET: Obtener turnos para el calendario
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -52,6 +53,15 @@ export async function GET(req: NextRequest) {
       .populate('profesional', 'name lastName email')
       .sort({ fechaInicio: 1 });
 
+    // 🔍 OPTIMIZACIÓN: Buscamos todas las actividades de estos turnos en una sola consulta (evita consultas N+1)
+    const turnoIds = turnos.map(t => t._id.toString());
+    const actividades = await Actividad.find({ 
+      turnoId: { $in: turnoIds } 
+    }).select('turnoId');
+    
+    // Creamos un Set para búsqueda rápida O(1)
+    const turnosConActividad = new Set(actividades.map(a => a.turnoId.toString()));
+
     const eventos = turnos.map(turno => {
       const pacienteName = `${turno.paciente.name} ${turno.paciente.lastName}`;
       let color = '#3b82f6';
@@ -59,8 +69,11 @@ export async function GET(req: NextRequest) {
       if (turno.estado === 'cancelado') color = '#ef4444';
       if (turno.estado === 'completado') color = '#64748b';
 
+      const turnoIdStr = turno._id.toString();
+      const tieneActividad = turnosConActividad.has(turnoIdStr);
+
       return {
-        id: turno._id.toString(),
+        id: turnoIdStr,
         title: pacienteName,
         start: turno.fechaInicio,
         end: turno.fechaFin,
@@ -75,6 +88,7 @@ export async function GET(req: NextRequest) {
           dniDorsoUrl: turno.dniDorsoUrl || '',
           pacienteId: turno.paciente._id,
           profesionalId: turno.profesional._id,
+          tieneActividad: tieneActividad, // ✅ NUEVA BANDERA PARA EL FRONTEND
         }
       };
     });
