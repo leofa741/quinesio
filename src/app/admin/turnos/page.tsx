@@ -18,7 +18,6 @@ import {
 import { FaArrowLeft } from 'react-icons/fa';
 import PlantillasClinicas from '@/app/components/plantillaclinica/PlantillasClinicas';
 
-
 interface Profesional {
   _id: string;
   name: string;
@@ -70,7 +69,8 @@ export default function AgendaTurnosPage() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
-  const [selectedProf, setSelectedProf] = useState<string>('');
+  const [selectedProf, setSelectedProf] = useState<string>('todos'); 
+  const [formProfId, setFormProfId] = useState<string>(''); // ✅ Estado independiente para el formulario
   const [events, setEvents] = useState<any[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -124,8 +124,9 @@ export default function AgendaTurnosPage() {
       const res = await fetch('/api/admin/profesionales');
       const data = await res.json();
       if (data.success) {
-        setProfesionales(data.profesionales);
-        if (data.profesionales.length > 0 && !selectedProf) setSelectedProf(data.profesionales[0]._id);
+        const todosOption = { _id: 'todos', name: 'Todos', lastName: 'los profesionales' };
+        const listaProfesionales = [todosOption, ...data.profesionales];
+        setProfesionales(listaProfesionales);
       }
     } catch (error) { toast.error('Error al cargar profesionales'); }
     finally { setIsInitialLoading(false); }
@@ -148,6 +149,10 @@ export default function AgendaTurnosPage() {
     setIsSearching(false);
     setTurnoFiles({ orden: null, dniFrente: null, dniDorso: null });
     setTurnoPreviews({ orden: '', dniFrente: '', dniDorso: '' });
+    
+    // ✅ Asignamos el profesional al formulario SIN cambiar el filtro global del calendario
+    const profReal = profesionales.find(p => p._id !== 'todos');
+    setFormProfId(selectedProf === 'todos' && profReal ? profReal._id : selectedProf);
   };
 
   const fetchPacientesList = async (searchTerm: string) => {
@@ -324,7 +329,7 @@ export default function AgendaTurnosPage() {
 
     const formDataToSend = new FormData();
     formDataToSend.append('pacienteId', formData.pacienteId);
-    formDataToSend.append('profesionalId', selectedProf);
+    formDataToSend.append('profesionalId', formProfId); // ✅ CORREGIDO: Usa formProfId en lugar de selectedProf
     formDataToSend.append('fechaInicio', fechaInicio.toISOString());
     formDataToSend.append('fechaFin', fechaFin.toISOString());
     formDataToSend.append('duracionMinutos', formData.duracion.toString());
@@ -447,20 +452,21 @@ export default function AgendaTurnosPage() {
     ? events
     : events.filter((event: any) => event.extendedProps.estado === statusFilter);
 
-  const currentProfName = profesionales.find(p => p._id === selectedProf);
+  const currentProfName = selectedProf === 'todos'
+    ? { name: 'Todos', lastName: 'los profesionales' }
+    : profesionales.find(p => p._id === selectedProf);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mt-45 mx-auto">
         <button
           onClick={() => router.push('/gestion')}
-          className="inline-flex   items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
         >
           <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" />
           Volver al Panel Principal
         </button>
 
-        {/* ✅ ENCABEZADO LIMPIO: Solo título, indicador de profesional y botón de acción */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
@@ -481,7 +487,6 @@ export default function AgendaTurnosPage() {
           </button>
         </div>
 
-        {/* ✅ FILTROS INTERACTIVOS DEL CALENDARIO */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
             { id: 'todos', label: 'Todos' },
@@ -523,42 +528,37 @@ export default function AgendaTurnosPage() {
             }}
             eventClick={handleEventClick}
             height="auto"
-
-            // ✅ NUEVA PROPIEDAD: Renderizado personalizado del contenido del evento
             eventContent={(arg) => {
               const tieneActividad = arg.event.extendedProps.tieneActividad;
               const estado = arg.event.extendedProps.estado;
               const turnoId = arg.event.id;
-
-              // Condición: Turno confirmado/completado Y sin actividad registrada
+              const profesionalNombre = arg.event.extendedProps.profesionalNombre;
               const necesitaRegistro = (estado === 'confirmado' || estado === 'completado') && !tieneActividad;
 
               return (
-                <div className="flex items-center gap-2 px-2 py-1 h-full text-white overflow-hidden">
-
-                  {/* 1. Indicador visual compacto (Icono o punto decorativo) */}
-                  {necesitaRegistro ? (
-                    <a
-                      href={`/admin/seguimiento-actividades/nuevo?turnoId=${turnoId}`}
-                      onClick={(e) => e.stopPropagation()} // Evita que se abra el modal al hacer clic en el icono
-                      className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-amber-500/20 border border-amber-400/50 rounded hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all cursor-pointer"
-                      title="⚠️ Click para registrar la actividad clínica y honorarios de este turno"
-                    >
-                      <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    // Un pequeño punto decorativo para mantener la alineación visual cuando todo está en regla
-                    <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-white/40"></span>
+                <div className="flex flex-col justify-center h-full text-white overflow-hidden px-1.5 py-1 text-[11px] leading-tight">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    {necesitaRegistro ? (
+                      <a
+                        href={`/admin/seguimiento-actividades/nuevo?turnoId=${turnoId}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-shrink-0 w-4 h-4 flex items-center justify-center bg-amber-500/20 border border-amber-400/50 rounded hover:bg-amber-500 hover:text-white transition-all cursor-pointer"
+                        title="Registrar actividad"
+                      >
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="w-2.5 h-2.5" />
+                      </a>
+                    ) : (
+                      <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-white/40"></span>
+                    )}
+                    <span className="font-bold truncate">{arg.event.title}</span>
+                  </div>
+                  {profesionalNombre && (
+                    <div className="pl-6 text-[10px] opacity-80 truncate font-medium">
+                      {profesionalNombre}
+                    </div>
                   )}
-
-                  {/* 2. Texto del evento (Siempre legible y sin aplastarse) */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-medium truncate leading-tight opacity-90">
-                      {arg.timeText}
-                    </div>
-                    <div className="text-xs font-semibold truncate leading-tight">
-                      {arg.event.title}
-                    </div>
+                  <div className="pl-6 text-[10px] opacity-70 truncate">
+                    {arg.timeText}
                   </div>
                 </div>
               );
@@ -567,7 +567,6 @@ export default function AgendaTurnosPage() {
         </div>
       </div>
 
-      {/* 1. MODAL DE CREACIÓN DE TURNO */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -579,26 +578,16 @@ export default function AgendaTurnosPage() {
               <form onSubmit={handleSubmitTurno} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-
-                    {/* ✅ NUEVO: Selector de Profesional movido al primer campo del modal */}
                     <div>
                       <label className="block text-sm text-slate-400 mb-1">Profesional</label>
                       <div className="relative">
                         <FontAwesomeIcon icon={faUserMd} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                         <select
-                          value={selectedProf}
-                          onChange={(e) => {
-                            const newProfId = e.target.value;
-                            setSelectedProf(newProfId);
-                            // Actualizar calendario inmediatamente al cambiar aquí
-                            const calendarApi = calendarRef.current?.getApi();
-                            if (calendarApi && newProfId) {
-                              fetchEvents(calendarApi.view.currentStart.toISOString(), calendarApi.view.currentEnd.toISOString());
-                            }
-                          }}
+                          value={formProfId} // ✅ CORREGIDO: Usa formProfId
+                          onChange={(e) => setFormProfId(e.target.value)} // ✅ CORREGIDO: Actualiza solo formProfId
                           className="w-full pl-10 pr-10 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 appearance-none"
                         >
-                          {profesionales.map(p => (
+                          {profesionales.filter(p => p._id !== 'todos').map(p => (
                             <option key={p._id} value={p._id}>{p.name} {p.lastName}</option>
                           ))}
                         </select>
@@ -694,7 +683,6 @@ export default function AgendaTurnosPage() {
         </div>
       )}
 
-      {/* 2. MODAL DE ACCIÓN (Solo para PENDIENTES) */}
       {actionModalOpen && selectedTurno && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
@@ -715,7 +703,6 @@ export default function AgendaTurnosPage() {
         </div>
       )}
 
-      {/* 3. MODAL DE DETALLE MEJORADO */}
       {detailModalOpen && selectedTurno && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -759,7 +746,6 @@ export default function AgendaTurnosPage() {
                   <button onClick={handleUpdateTurnoDetails} disabled={isSavingNotes} className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50">
                     {isSavingNotes ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><FontAwesomeIcon icon={faSave} /> Guardar Cambios</>}
                   </button>
-                  {/* ✅ NUEVO BOTÓN: Ver Evolución del Paciente (Siempre visible si hay paciente) */}
                   {selectedTurno.pacienteId && (
                     <button
                       onClick={() => window.open(`/admin/evolucion/${selectedTurno.pacienteId}`, '_blank')}
@@ -768,8 +754,6 @@ export default function AgendaTurnosPage() {
                       <FontAwesomeIcon icon={faChartLine} /> Ver Evolución del Paciente
                     </button>
                   )}
-
-
                   {selectedTurno.start && selectedTurno.end && (
                     <a
                       href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Turno: ${selectedTurno.paciente?.name || 'Paciente'}`)}&dates=${new Date(selectedTurno.start).toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(selectedTurno.end).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(`Motivo: ${selectedTurno.motivo || 'Consulta'}`)}&location=${encodeURIComponent('Centro Kinesiológico')}`}
@@ -777,17 +761,12 @@ export default function AgendaTurnosPage() {
                       rel="noopener noreferrer"
                       className="px-4 py-2.5 bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition flex items-center justify-center gap-2"
                     >
-                      {/* Icono simple de calendario */}
                       <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
                       </svg>
                       <span>Agregar a Google Calendar</span>
                     </a>
                   )}
-
-
-
-                  {/* Botón de Registrar Sesión (solo si el turno está confirmado o pendiente) */}
                   {(selectedTurno.estado === 'confirmado' || selectedTurno.estado === 'pendiente') && (
                     <button onClick={() => { setShowClinicalForm(true); setSessionStep('select'); }}
                       className="px-4 py-3 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-sky-900/30">
@@ -850,7 +829,6 @@ export default function AgendaTurnosPage() {
                       </div>
                     )}
 
-                    {/* ✅ AQUÍ ESTÁ LA MAGIA: Componente de Plantillas */}
                     <PlantillasClinicas onSelect={(plantilla) => {
                       setClinicalFormData({
                         ...clinicalFormData,

@@ -41,8 +41,12 @@ export async function GET(req: NextRequest) {
     const end = searchParams.get('end');
 
     const query: any = {};
-    if (profesionalId) query.profesional = profesionalId;
-    else if (session.user?.role === 'profesionales') query.profesional = session.user.id;
+    // ✅ NUEVO: Si es 'todos', no filtramos por profesional. Si es un ID específico, sí.
+    if (profesionalId && profesionalId !== 'todos') {
+      query.profesional = profesionalId;
+    } else if (session.user?.role === 'profesionales') {
+      query.profesional = session.user.id;
+    }
 
     if (start && end) {
       query.fechaInicio = { $gte: new Date(start), $lte: new Date(end) };
@@ -53,17 +57,18 @@ export async function GET(req: NextRequest) {
       .populate('profesional', 'name lastName email')
       .sort({ fechaInicio: 1 });
 
-    // 🔍 OPTIMIZACIÓN: Buscamos todas las actividades de estos turnos en una sola consulta (evita consultas N+1)
     const turnoIds = turnos.map(t => t._id.toString());
     const actividades = await Actividad.find({ 
       turnoId: { $in: turnoIds } 
     }).select('turnoId');
     
-    // Creamos un Set para búsqueda rápida O(1)
     const turnosConActividad = new Set(actividades.map(a => a.turnoId.toString()));
 
     const eventos = turnos.map(turno => {
       const pacienteName = `${turno.paciente.name} ${turno.paciente.lastName}`;
+      // ✅ NUEVO: Obtenemos el nombre del profesional para mostrarlo en el calendario
+      const profesionalName = `${turno.profesional.name} ${turno.profesional.lastName}`;
+      
       let color = '#3b82f6';
       if (turno.estado === 'confirmado') color = '#10b981';
       if (turno.estado === 'cancelado') color = '#ef4444';
@@ -88,7 +93,8 @@ export async function GET(req: NextRequest) {
           dniDorsoUrl: turno.dniDorsoUrl || '',
           pacienteId: turno.paciente._id,
           profesionalId: turno.profesional._id,
-          tieneActividad: tieneActividad, // ✅ NUEVA BANDERA PARA EL FRONTEND
+          profesionalNombre: profesionalName, // ✅ NUEVO: Enviamos el nombre al frontend
+          tieneActividad: tieneActividad,
         }
       };
     });
@@ -148,19 +154,9 @@ export async function POST(req: NextRequest) {
     const tiempoPrep = profesional.tiempoPreparacionMinutos || 0;
     const end = new Date(start.getTime() + (duracionMinutos + tiempoPrep) * 60000);
 
-    const turnoSuperpuesto = await Turno.findOne({
-      profesional: profesionalId,
-      estado: { $in: ['pendiente', 'confirmado'] },
-      $or: [
-        { fechaInicio: { $lt: end, $gte: start } },
-        { fechaFin: { $gt: start, $lte: end } },
-        { fechaInicio: { $lte: start }, fechaFin: { $gte: end } }
-      ]
-    });
-
-    if (turnoSuperpuesto) {
-      return NextResponse.json({ message: 'El profesional ya tiene un turno en ese horario.' }, { status: 409 });
-    }
+    // ✅ MODIFICADO: Se eliminó la validación bloqueante de superposición.
+    // Ahora el sistema permite crear "sobreturnos" (múltiples pacientes a la misma hora 
+    // para el mismo profesional, o distintos profesionales a la misma hora).
 
     const nuevoTurno = await Turno.create({
       paciente: pacienteId,
@@ -228,7 +224,6 @@ export async function PATCH(req: NextRequest) {
       if (dniFrenteFile && dniFrenteFile.size > 0) updateData.dniFrenteUrl = await uploadToCloudinary(dniFrenteFile, 'dnis');
       if (dniDorsoFile && dniDorsoFile.size > 0) updateData.dniDorsoUrl = await uploadToCloudinary(dniDorsoFile, 'dnis');
       
-      // Permitir borrar imágenes si se envía un string vacío explícitamente
       if (formData.get('deleteOrden') === 'true') updateData.ordenMedicaUrl = null;
       if (formData.get('deleteDniFrente') === 'true') updateData.dniFrenteUrl = null;
       if (formData.get('deleteDniDorso') === 'true') updateData.dniDorsoUrl = null;
