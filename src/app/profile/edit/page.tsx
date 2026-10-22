@@ -143,7 +143,7 @@ export default function EditarMiPerfilPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8">
-      <div className="max-w-4xl mx-auto mt-8 mb-8">
+      <div className="max-w-4xl mx-auto mt-40 mb-8">
         <button onClick={() => router.push('/profile')} className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-4">
           <FaArrowLeft /> Volver a mi perfil
         </button>

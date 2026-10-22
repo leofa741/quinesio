@@ -231,7 +231,7 @@ function NotificacionesContent() {
       </div>
 
       <div className="pt-24 lg:pt-28 relative z-10 px-4 md:px-8 pb-12">
-        <header className="mb-8 max-w-5xl mx-auto">
+        <header className="mb-8 mt-40 max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
             <Link href="/profile" className={`group inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${theme.textSecondary} hover:text-sky-400 transition-all`}>
               <FaArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
