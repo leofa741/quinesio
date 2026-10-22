@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faCalendarPlus, faClock, faFileMedical, 
-  faCheckCircle, faArrowRight, faUserMd, faShieldHalved 
+  faClock, faFileMedical, faCheckCircle, 
+  faUserMd, faShieldHalved, faCalendarCheck, faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function TurnosPage() {
@@ -40,7 +40,7 @@ export default function TurnosPage() {
               new Date(t.fechaInicio) > ahora && t.estado !== 'cancelado'
             ).sort((a: any, b: any) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime());
             
-            setProximosTurnos(futuros.slice(0, 2)); // Mostrar máx. los 2 próximos
+            setProximosTurnos(futuros.slice(0, 3)); // Mostrar máx. los 3 próximos
           }
         } catch (error) {
           console.error('Error cargando turnos:', error);
@@ -63,9 +63,9 @@ export default function TurnosPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* ========================================== */}
-      {/* HERO SECTION CON ACCESO RÁPIDO             */}
+      {/* HERO SECTION: SOLO LECTURA (Sin reservas)  */}
       {/* ========================================== */}
-      <div className="relative overflow-hidden  bg-gradient-to-b from-sky-950/40 to-slate-950 border-b border-slate-800">
+      <div className="relative overflow-hidden bg-gradient-to-b from-sky-950/40 to-slate-950 border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 mt-40 py-16 md:py-24 text-center relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }} 
@@ -76,21 +76,13 @@ export default function TurnosPage() {
               Portal del Paciente
             </span>
             <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-white via-sky-200 to-sky-400 bg-clip-text text-transparent">
-              Tu salud, organizada y bajo control
+              Tus Turnos Asignados
             </h1>
             <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
-              Gestiona tus citas, consulta tu historial y mantente en contacto con tu equipo de kinesiología de forma rápida y segura.
+              Consulta aquí las fechas y horarios de tus sesiones de kinesiología. Nuestro equipo administrativo se encarga de coordinar y asignar tus citas para tu mayor comodidad.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
-                onClick={() => router.push('/turnos/reservar')}
-                className="group px-8 py-4 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-900/20"
-              >
-                <FontAwesomeIcon icon={faCalendarPlus} />
-                Reservar Nuevo Turno
-                <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
               <button 
                 onClick={() => router.push('/profile')}
                 className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
@@ -98,6 +90,13 @@ export default function TurnosPage() {
                 <FontAwesomeIcon icon={faFileMedical} />
                 Mi Perfil y Documentos
               </button>
+              <a 
+                href="mailto:info@tumarca.ar" // Cambia este correo por el real de la administración
+                className="px-8 py-4 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-sky-900/20"
+              >
+                <FontAwesomeIcon icon={faEnvelope} />
+                Contactar a la Administración
+              </a>
             </div>
           </motion.div>
         </div>
@@ -106,13 +105,13 @@ export default function TurnosPage() {
       <div className="max-w-5xl mx-auto px-4 py-12 space-y-16">
         
         {/* ========================================== */}
-        {/* WIDGET: PRÓXIMOS TURNOS (Valor Inmediato)  */}
+        {/* WIDGET: PRÓXIMOS TURNOS (Solo Visualización) */}
         {/* ========================================== */}
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-3">
-              <FontAwesomeIcon icon={faClock} className="text-sky-500" />
-              Tus Próximas Citas
+              <FontAwesomeIcon icon={faCalendarCheck} className="text-sky-500" />
+              Próximas Citas Asignadas
             </h2>
             <button onClick={() => router.push('/turnos/mis-turnos')} className="text-sm text-sky-400 hover:text-sky-300 transition-colors">
               Ver historial completo →
@@ -122,7 +121,7 @@ export default function TurnosPage() {
           {loadingTurnos ? (
             <div className="h-32 bg-slate-900/50 rounded-xl border border-slate-800 animate-pulse" />
           ) : proximosTurnos.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {proximosTurnos.map((turno) => (
                 <motion.div 
                   key={turno._id}
@@ -136,8 +135,8 @@ export default function TurnosPage() {
                         <FontAwesomeIcon icon={faUserMd} className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-semibold text-white">{turno.profesional.name} {turno.profesional.lastName}</p>
-                        <p className="text-xs text-slate-400">{turno.profesional.especialidades?.[0] || 'Kinesiología'}</p>
+                        <p className="font-semibold text-white">{turno.profesional?.name} {turno.profesional?.lastName}</p>
+                        <p className="text-xs text-slate-400">{turno.profesional?.especialidades?.[0] || 'Kinesiología'}</p>
                       </div>
                     </div>
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
@@ -157,74 +156,46 @@ export default function TurnosPage() {
                       {new Date(turno.fechaInicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs
                     </div>
                   </div>
+                  
+                  {turno.motivoConsulta && (
+                    <div className="mt-3 pt-3 border-t border-slate-800">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Motivo de la sesión</p>
+                      <p className="text-sm text-slate-300">{turno.motivoConsulta}</p>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
           ) : (
             <div className="bg-slate-900/50 border border-dashed border-slate-800 rounded-xl p-8 text-center">
-              <FontAwesomeIcon icon={faCalendarPlus} className="w-10 h-10 text-slate-600 mb-3" />
-              <p className="text-slate-400 mb-4">No tienes turnos programados próximamente.</p>
-              <button 
-                onClick={() => router.push('/turnos/reservar')}
-                className="text-sky-400 hover:text-sky-300 font-medium text-sm hover:underline"
+              <FontAwesomeIcon icon={faCalendarCheck} className="w-10 h-10 text-slate-600 mb-3" />
+              <p className="text-slate-400 mb-2 font-medium">No tienes turnos asignados próximamente.</p>
+              <p className="text-slate-500 text-sm mb-4 max-w-md mx-auto">
+                Nuestro equipo administrativo se pondrá en contacto contigo para coordinar tu próxima sesión. Si necesitas consultar algo, no dudes en escribirnos.
+              </p>
+              <a 
+                href="mailto:info@tumarca.ar"
+                className="inline-flex items-center gap-2 text-sky-400 hover:text-sky-300 font-medium text-sm hover:underline"
               >
-                Agendar una cita ahora
-              </button>
+                <FontAwesomeIcon icon={faEnvelope} /> Consultar por mis turnos
+              </a>
             </div>
           )}
         </section>
 
         {/* ========================================== */}
-        {/* CÓMO FUNCIONA (Reduce fricción)            */}
-        {/* ========================================== */}
-        <section>
-          <h2 className="text-2xl font-bold text-center mb-10">Reservar es muy simple</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { 
-                icon: faUserMd, 
-                title: '1. Elige a tu profesional', 
-                desc: 'Revisa perfiles, especialidades y horarios disponibles de nuestro equipo.' 
-              },
-              { 
-                icon: faClock, 
-                title: '2. Selecciona día y hora', 
-                desc: 'El calendario te mostrará en tiempo real los huecos libres para agendar.' 
-              },
-              { 
-                icon: faCheckCircle, 
-                title: '3. Recibe confirmación', 
-                desc: 'Te enviaremos un correo electrónico con los detalles y recordatorios.' 
-              }
-            ].map((step, idx) => (
-              <motion.div 
-                key={idx}
-                whileHover={{ y: -5 }}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center hover:border-sky-500/30 transition-all"
-              >
-                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-400">
-                  <FontAwesomeIcon icon={step.icon} className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">{step.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* ========================================== */}
-        {/* BENEFICIOS (Genera confianza)              */}
+        {/* BENEFICIOS (Enfocado en seguimiento, no en reserva) */}
         {/* ========================================== */}
         <section className="bg-slate-900/50 rounded-3xl p-8 md:p-12 border border-slate-800">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-bold mb-6">¿Por qué gestionar tus turnos online?</h2>
+              <h2 className="text-3xl font-bold mb-6">Tu tratamiento, siempre bajo control</h2>
               <ul className="space-y-4">
                 {[
-                  'Acceso 24/7 para agendar o reprogramar desde cualquier dispositivo.',
-                  'Historial clínico digital de tus sesiones y evoluciones.',
-                  'Recordatorios automáticos para que nunca olvides una cita.',
-                  'Gestión simplificada de autorizaciones de obras sociales.'
+                  'Visualiza en todo momento las fechas y horarios de tus sesiones asignadas.',
+                  'Accede a tu historial clínico digital con la evolución de cada sesión.',
+                  'Recibe recordatorios automáticos para que nunca olvides una cita.',
+                  'Mantén toda tu documentación médica (órdenes, estudios) centralizada y segura.'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-slate-300">
                     <FontAwesomeIcon icon={faShieldHalved} className="text-sky-500 mt-1 flex-shrink-0" />
@@ -242,7 +213,7 @@ export default function TurnosPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-white">Turno Confirmado</p>
-                    <p className="text-xs text-slate-400">Hoy, 10:00 hs</p>
+                    <p className="text-xs text-slate-400">Asignado por la administración</p>
                   </div>
                 </div>
                 <div className="h-2 bg-slate-800 rounded-full mb-2 w-3/4" />
