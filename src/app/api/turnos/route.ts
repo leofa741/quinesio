@@ -58,17 +58,17 @@ export async function GET(req: NextRequest) {
       .sort({ fechaInicio: 1 });
 
     const turnoIds = turnos.map(t => t._id.toString());
-    const actividades = await Actividad.find({ 
-      turnoId: { $in: turnoIds } 
+    const actividades = await Actividad.find({
+      turnoId: { $in: turnoIds }
     }).select('turnoId');
-    
+
     const turnosConActividad = new Set(actividades.map(a => a.turnoId.toString()));
 
     const eventos = turnos.map(turno => {
       const pacienteName = `${turno.paciente.name} ${turno.paciente.lastName}`;
       // ✅ NUEVO: Obtenemos el nombre del profesional para mostrarlo en el calendario
       const profesionalName = `${turno.profesional.name} ${turno.profesional.lastName}`;
-      
+
       let color = '#3b82f6';
       if (turno.estado === 'confirmado') color = '#10b981';
       if (turno.estado === 'cancelado') color = '#ef4444';
@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ✅ PATCH: Actualizar turno (Soporta FormData para imágenes y notas)
+// ✅ PATCH: Actualizar turno (Soporta FormData para imágenes, notas y comprobantes)
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -211,30 +211,44 @@ export async function PATCH(req: NextRequest) {
     const updateData: any = {};
 
     if (contentType.includes('multipart/form-data')) {
+      // ✅ CORRECCIÓN 1: Parseamos formData UNA SOLA VEZ
       const formData = await req.formData();
+      
       if (formData.has('estado')) updateData.estado = formData.get('estado');
       if (formData.has('motivoCancelacion')) updateData.motivoCancelacion = formData.get('motivoCancelacion');
       if (formData.has('notasInternas')) updateData.notasInternas = formData.get('notasInternas');
 
+      // ✅ CORRECCIÓN 2: Extraemos TODOS los archivos del mismo objeto formData
       const ordenFile = formData.get('ordenMedica') as File;
       const dniFrenteFile = formData.get('dniFrente') as File;
       const dniDorsoFile = formData.get('dniDorso') as File;
+      const comprobanteFile = formData.get('comprobantePago') as File; // <-- NUEVO
 
       if (ordenFile && ordenFile.size > 0) updateData.ordenMedicaUrl = await uploadToCloudinary(ordenFile, 'ordenes');
       if (dniFrenteFile && dniFrenteFile.size > 0) updateData.dniFrenteUrl = await uploadToCloudinary(dniFrenteFile, 'dnis');
       if (dniDorsoFile && dniDorsoFile.size > 0) updateData.dniDorsoUrl = await uploadToCloudinary(dniDorsoFile, 'dnis');
       
+      // ✅ CORRECCIÓN 3: Lógica de subida del comprobante integrada aquí
+      if (comprobanteFile && comprobanteFile.size > 0) {
+        updateData.comprobantePagoUrl = await uploadToCloudinary(comprobanteFile, 'comprobantes_pago');
+      }
+
+      // Lógica de eliminación de archivos
       if (formData.get('deleteOrden') === 'true') updateData.ordenMedicaUrl = null;
       if (formData.get('deleteDniFrente') === 'true') updateData.dniFrenteUrl = null;
       if (formData.get('deleteDniDorso') === 'true') updateData.dniDorsoUrl = null;
+      if (formData.get('deleteComprobante') === 'true') updateData.comprobantePagoUrl = null; // <-- NUEVO
 
     } else {
       const body = await req.json();
       if (body.estado) updateData.estado = body.estado;
       if (body.motivoCancelacion) updateData.motivoCancelacion = body.motivoCancelacion;
       if (body.notasInternas !== undefined) updateData.notasInternas = body.notasInternas;
+      if (body.comprobantePagoUrl !== undefined) updateData.comprobantePagoUrl = body.comprobantePagoUrl;
     }
 
+    // ✅ CORRECCIÓN 4: Esta validación va DESPUÉS de procesar todo, 
+    // para no bloquear si lo único que se actualiza es el comprobante.
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ message: 'No hay datos para actualizar' }, { status: 400 });
     }
@@ -248,7 +262,7 @@ export async function PATCH(req: NextRequest) {
     if (updateData.estado === 'confirmado' || updateData.estado === 'cancelado') {
       const dateStr = new Date(turnoActualizado.fechaInicio).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
       const timeStr = new Date(turnoActualizado.fechaInicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-      
+
       await sendAppointmentEmails({
         patientEmail: turnoActualizado.paciente.email,
         patientName: `${turnoActualizado.paciente.name} ${turnoActualizado.paciente.lastName}`,

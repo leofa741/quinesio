@@ -4,15 +4,15 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ITurno extends Document {
   paciente: mongoose.Types.ObjectId;
   profesional: mongoose.Types.ObjectId;
-  
+
   // Fechas y tiempos
-  fechaInicio: Date; 
-  fechaFin: Date;    
+  fechaInicio: Date;
+  fechaFin: Date;
   duracionMinutos: number;
-  
+
   // Estado del turno
   estado: 'pendiente' | 'confirmado' | 'cancelado' | 'ausente' | 'completado' | 'reprogramado';
-  
+
   // Motivos y notas
   motivoConsulta?: string;
   notasInternas?: string;
@@ -20,7 +20,7 @@ export interface ITurno extends Document {
   dniFrenteUrl?: string;
   dniDorsoUrl?: string;
   motivoCancelacion?: string;
-  
+
   // Datos financieros del turno (congelados al reservar)
   valorAcordado: number;
   moneda: string;
@@ -35,7 +35,8 @@ export interface ITurno extends Document {
   estadoPagoProfesional: 'pendiente' | 'liquidado';
   observacionesPago?: string;
   recordatorioEnviado?: boolean;
-  
+  comprobantePagoUrl?: string;
+
   // Metadata
   creadoPor: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -49,13 +50,13 @@ const TurnoSchema = new Schema<ITurno>({
   fechaInicio: { type: Date, required: true },
   fechaFin: { type: Date, required: true },
   duracionMinutos: { type: Number, required: true },
-  
-  estado: { 
-    type: String, 
+
+  estado: {
+    type: String,
     enum: ['pendiente', 'confirmado', 'cancelado', 'ausente', 'completado', 'reprogramado'],
     default: 'pendiente'
   },
-  
+
   motivoConsulta: { type: String, trim: true },
   notasInternas: { type: String, trim: true },
   motivoCancelacion: { type: String, trim: true },
@@ -63,7 +64,7 @@ const TurnoSchema = new Schema<ITurno>({
   ordenMedicaUrl: { type: String, trim: true },
   dniFrenteUrl: { type: String, trim: true },
   dniDorsoUrl: { type: String, trim: true },
-  
+
   valorAcordado: { type: Number, default: 0 },
   moneda: { type: String, default: 'ARS' },
   requiereAutorizacionObraSocial: { type: Boolean, default: false },
@@ -72,27 +73,29 @@ const TurnoSchema = new Schema<ITurno>({
   // 🔹 CAMPOS FINANCIEROS Y DE PAGO (Sintaxis correcta de Mongoose)
   montoTotal: { type: Number, default: 0 },
   montoProfesional: { type: Number, default: 0 },
-  metodoPago: { 
-    type: String, 
-    enum: ['efectivo', 'transferencia', 'tarjeta', 'obra_social'], 
-    default: 'efectivo' 
+  metodoPago: {
+    type: String,
+    enum: ['efectivo', 'transferencia', 'tarjeta', 'obra_social'],
+    default: 'efectivo'
   },
-  estadoPagoPaciente: { 
-    type: String, 
-    enum: ['pendiente', 'pagado', 'parcial'], 
-    default: 'pendiente' 
+  estadoPagoPaciente: {
+    type: String,
+    enum: ['pendiente', 'pagado', 'parcial'],
+    default: 'pendiente'
   },
-  estadoPagoProfesional: { 
-    type: String, 
-    enum: ['pendiente', 'liquidado'], 
-    default: 'pendiente' 
+  estadoPagoProfesional: {
+    type: String,
+    enum: ['pendiente', 'liquidado'],
+    default: 'pendiente'
   },
   observacionesPago: { type: String, trim: true },
 
+  comprobantePagoUrl: { type: String, trim: true },
+
   recordatorioEnviado: { type: Boolean, default: false },
-  
+
   creadoPor: { type: Schema.Types.ObjectId, ref: 'User', required: true }
-}, { 
+}, {
   timestamps: true,
   toJSON: { virtuals: true },
   toObject: { virtuals: true }

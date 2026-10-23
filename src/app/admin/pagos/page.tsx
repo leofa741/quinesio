@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faMoneyBillWave, faSpinner, faCheckCircle, faHourglassHalf, 
-  faUserMd, faFilter, faEdit, faSave, faTimes
+  faUserMd, faFilter, faEdit, faSave, faTimes, faImage, faEye
 } from '@fortawesome/free-solid-svg-icons';
 import { FaArrowLeft } from 'react-icons/fa';
 
@@ -25,11 +25,10 @@ export default function PagosPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [viewingImage, setViewingImage] = useState<string | null>(null); // ✅ Para ver la imagen
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      fetchProfesionales();
-    }
+    if (status === 'authenticated') fetchProfesionales();
   }, [status]);
 
   useEffect(() => {
@@ -37,21 +36,15 @@ export default function PagosPage() {
       router.push('/login?callbackUrl=/admin/pagos');
       return;
     }
-    if (status === 'authenticated') {
-      fetchPagos();
-    }
+    if (status === 'authenticated') fetchPagos();
   }, [status, router, filtroProf, filtroEstado]);
 
   const fetchProfesionales = async () => {
     try {
       const res = await fetch('/api/admin/profesionales');
       const data = await res.json();
-      if (data.success) {
-        setProfesionales(data.profesionales);
-      }
-    } catch (error) {
-      console.error('Error cargando profesionales:', error);
-    }
+      if (data.success) setProfesionales(data.profesionales);
+    } catch (error) { console.error('Error cargando profesionales:', error); }
   };
 
   const fetchPagos = async () => {
@@ -76,8 +69,6 @@ export default function PagosPage() {
   const startEditing = (turno: any) => {
     setEditingId(turno._id);
     setEditData({
-      // 🔑 SOLUCIÓN: Usamos estrictamente lo que ya está guardado en el turno.
-      // Sin cálculos de fallback que puedan alterar el valor.
       montoTotal: turno.montoTotal || 0,
       montoProfesional: turno.montoProfesional || 0,
       estadoPagoPaciente: turno.estadoPagoPaciente || 'pendiente',
@@ -118,12 +109,8 @@ export default function PagosPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mt-40 mx-auto">
-        <button 
-          onClick={() => router.push('/gestion')} 
-          className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit"
-        >
-          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
-          Volver al Panel Principal
+        <button onClick={() => router.push('/gestion')} className="inline-flex items-center gap-2 text-slate-400 hover:text-sky-400 transition-colors mb-8 group w-fit">
+          <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> Volver al Panel Principal
         </button>
         
         <div className="flex items-center justify-between mb-8">
@@ -136,13 +123,12 @@ export default function PagosPage() {
           </div>
         </div>
 
+        {/* ... (Mantén tus tarjetas de resumen y filtros aquí, son correctas) ... */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm font-medium mb-1">Total Pendiente por Cobrar (Pacientes/OS)</p>
-              <p className="text-3xl font-bold text-amber-400">
-                ${resumen.porCobrar.toLocaleString('es-AR')}
-              </p>
+              <p className="text-slate-400 text-sm font-medium mb-1">Total Pendiente por Cobrar</p>
+              <p className="text-3xl font-bold text-amber-400">${resumen.porCobrar.toLocaleString('es-AR')}</p>
             </div>
             <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center">
               <FontAwesomeIcon icon={faHourglassHalf} className="text-amber-400 text-xl" />
@@ -150,10 +136,8 @@ export default function PagosPage() {
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm font-medium mb-1">Total Pendiente por Pagar (Profesionales)</p>
-              <p className="text-3xl font-bold text-rose-400">
-                ${resumen.porPagar.toLocaleString('es-AR')}
-              </p>
+              <p className="text-slate-400 text-sm font-medium mb-1">Total Pendiente por Pagar</p>
+              <p className="text-3xl font-bold text-rose-400">${resumen.porPagar.toLocaleString('es-AR')}</p>
             </div>
             <div className="w-12 h-12 bg-rose-500/20 rounded-full flex items-center justify-center">
               <FontAwesomeIcon icon={faUserMd} className="text-rose-400 text-xl" />
@@ -164,28 +148,16 @@ export default function PagosPage() {
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[250px]">
             <label className="block text-xs text-slate-400 mb-1">Filtrar por Profesional</label>
-            <select 
-              value={filtroProf} 
-              onChange={(e) => setFiltroProf(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:border-sky-500 focus:outline-none appearance-none"
-            >
+            <select value={filtroProf} onChange={(e) => setFiltroProf(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:border-sky-500 focus:outline-none appearance-none">
               <option value="">👨‍⚕️ Todos los profesionales</option>
-              {profesionales.map((prof) => (
-                <option key={prof._id} value={prof._id}>
-                  {prof.name} {prof.lastName} {prof.especialidades?.length > 0 ? `(${prof.especialidades[0]})` : ''}
-                </option>
-              ))}
+              {profesionales.map((prof) => (<option key={prof._id} value={prof._id}>{prof.name} {prof.lastName}</option>))}
             </select>
           </div>
           <div className="w-48">
             <label className="block text-xs text-slate-400 mb-1">Estado de Liquidación</label>
-            <select 
-              value={filtroEstado} 
-              onChange={(e) => setFiltroEstado(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:border-sky-500 focus:outline-none appearance-none"
-            >
+            <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:border-sky-500 focus:outline-none appearance-none">
               <option value="pendiente">⏳ Solo Pendientes</option>
-              <option value="todos">📋 Todos (Incluye liquidados)</option>
+              <option value="todos">📋 Todos</option>
             </select>
           </div>
         </div>
@@ -197,22 +169,15 @@ export default function PagosPage() {
                 <tr>
                   <th className="px-6 py-4">Fecha / Paciente</th>
                   <th className="px-6 py-4">Profesional</th>
-                  <th className="px-6 py-4">Obra Social</th>
                   <th className="px-6 py-4 text-right">Monto Total</th>
+                  <th className="px-6 py-4 text-center">Comprobante</th> {/* ✅ NUEVA COLUMNA */}
                   <th className="px-6 py-4 text-center">Estado Cobro</th>
-                  <th className="px-6 py-4 text-center">Estado Liquidación</th>
                   <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {turnos.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
-                      {filtroEstado === 'pendiente' 
-                        ? '🎉 ¡Excelente! No hay pagos ni liquidaciones pendientes.' 
-                        : 'No se encontraron turnos completados con los filtros actuales.'}
-                    </td>
-                  </tr>
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-500">No hay registros pendientes.</td></tr>
                 ) : (
                   turnos.map((turno: any) => {
                     const isEditing = editingId === turno._id;
@@ -220,82 +185,42 @@ export default function PagosPage() {
                       <tr key={turno._id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="px-6 py-4">
                           <p className="font-medium text-white">{turno.paciente?.name} {turno.paciente?.lastName}</p>
-                          <p className="text-xs text-slate-500">
-                            {new Date(turno.fechaInicio).toLocaleDateString('es-AR')} {' '}
-                            {new Date(turno.fechaInicio).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'})}
-                          </p>
+                          <p className="text-xs text-slate-500">{new Date(turno.fechaInicio).toLocaleDateString('es-AR')}</p>
                         </td>
-                        <td className="px-6 py-4 text-slate-300">
-                          {turno.profesional?.name} {turno.profesional?.lastName}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300">
-                            {turno.paciente?.obraSocial?.nombre || 'Particular'}
-                          </span>
-                        </td>
+                        <td className="px-6 py-4 text-slate-300">{turno.profesional?.name} {turno.profesional?.lastName}</td>
                         
                         <td className="px-6 py-4 text-right">
                           {isEditing ? (
-                            <div className="flex flex-col gap-1 items-end">
-                              <input 
-                                type="number" 
-                                value={editData.montoTotal} 
-                                onChange={e => setEditData({...editData, montoTotal: Number(e.target.value)})}
-                                className="w-24 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-right text-white text-sm focus:border-sky-500 focus:outline-none"
-                              />
-                              <span className="text-[10px] text-slate-500">Al Profesional: 
-                                <input 
-                                  type="number" 
-                                  value={editData.montoProfesional} 
-                                  onChange={e => setEditData({...editData, montoProfesional: Number(e.target.value)})}
-                                  className="w-16 px-1 ml-1 bg-slate-800 border border-slate-600 rounded text-right text-white text-xs focus:border-sky-500 focus:outline-none"
-                                />
-                              </span>
-                            </div>
+                            <input type="number" value={editData.montoTotal} onChange={e => setEditData({...editData, montoTotal: Number(e.target.value)})} className="w-24 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-right text-white text-sm" />
                           ) : (
-                            <div>
-                              <p className="font-bold text-white">${(turno.montoTotal || 0).toLocaleString('es-AR')}</p>
-                              <p className="text-xs text-slate-500">Al Profesional: ${(turno.montoProfesional || 0).toLocaleString('es-AR')}</p>
-                            </div>
+                            <p className="font-bold text-white">${(turno.montoTotal || 0).toLocaleString('es-AR')}</p>
+                          )}
+                        </td>
+
+                        {/* ✅ COLUMNA DE COMPROBANTE */}
+                        <td className="px-6 py-4 text-center">
+                          {turno.comprobantePagoUrl ? (
+                            <button 
+                              onClick={() => setViewingImage(turno.comprobantePagoUrl)}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-sky-500/20 text-sky-400 rounded-full text-xs font-medium hover:bg-sky-500/30 transition"
+                            >
+                              <FontAwesomeIcon icon={faEye} /> Ver Imagen
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-500 italic">Sin comprobante</span>
                           )}
                         </td>
 
                         <td className="px-6 py-4 text-center">
                           {isEditing ? (
-                            <select 
-                              value={editData.estadoPagoPaciente}
-                              onChange={e => setEditData({...editData, estadoPagoPaciente: e.target.value})}
-                              className="bg-slate-800 border border-slate-600 rounded text-xs text-white px-2 py-1 focus:border-sky-500 focus:outline-none"
-                            >
+                            <select value={editData.estadoPagoPaciente} onChange={e => setEditData({...editData, estadoPagoPaciente: e.target.value})} className="bg-slate-800 border border-slate-600 rounded text-xs text-white px-2 py-1">
                               <option value="pendiente">Pendiente</option>
                               <option value="pagado">Pagado</option>
                               <option value="parcial">Parcial</option>
                             </select>
                           ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                              turno.estadoPagoPaciente === 'pagado' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                            }`}>
-                              {turno.estadoPagoPaciente === 'pagado' ? <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" /> : <FontAwesomeIcon icon={faHourglassHalf} className="w-3 h-3" />}
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${turno.estadoPagoPaciente === 'pagado' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
                               {turno.estadoPagoPaciente}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {isEditing ? (
-                            <select 
-                              value={editData.estadoPagoProfesional}
-                              onChange={e => setEditData({...editData, estadoPagoProfesional: e.target.value})}
-                              className="bg-slate-800 border border-slate-600 rounded text-xs text-white px-2 py-1 focus:border-sky-500 focus:outline-none"
-                            >
-                              <option value="pendiente">Pendiente</option>
-                              <option value="liquidado">Liquidado</option>
-                            </select>
-                          ) : (
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                              turno.estadoPagoProfesional === 'liquidado' ? 'bg-sky-500/20 text-sky-400' : 'bg-rose-500/20 text-rose-400'
-                            }`}>
-                              {turno.estadoPagoProfesional === 'liquidado' ? <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" /> : <FontAwesomeIcon icon={faHourglassHalf} className="w-3 h-3" />}
-                              {turno.estadoPagoProfesional}
                             </span>
                           )}
                         </td>
@@ -303,17 +228,11 @@ export default function PagosPage() {
                         <td className="px-6 py-4 text-right">
                           {isEditing ? (
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => savePayment(turno._id)} className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition" title="Guardar">
-                                <FontAwesomeIcon icon={faSave} />
-                              </button>
-                              <button onClick={() => setEditingId(null)} className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition" title="Cancelar">
-                                <FontAwesomeIcon icon={faTimes} />
-                              </button>
+                              <button onClick={() => savePayment(turno._id)} className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"><FontAwesomeIcon icon={faSave} /></button>
+                              <button onClick={() => setEditingId(null)} className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"><FontAwesomeIcon icon={faTimes} /></button>
                             </div>
                           ) : (
-                            <button onClick={() => startEditing(turno)} className="p-2 text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition" title="Editar montos y estados">
-                              <FontAwesomeIcon icon={faEdit} />
-                            </button>
+                            <button onClick={() => startEditing(turno)} className="p-2 text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 rounded-lg transition"><FontAwesomeIcon icon={faEdit} /></button>
                           )}
                         </td>
                       </tr>
@@ -325,6 +244,18 @@ export default function PagosPage() {
           </div>
         </div>
       </div>
+
+      {/* ✅ MODAL PARA VER EL COMPROBANTE */}
+      {viewingImage && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingImage(null)}>
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setViewingImage(null)} className="absolute -top-10 right-0 text-white hover:text-sky-400 transition">
+              <FontAwesomeIcon icon={faTimes} className="w-6 h-6" /> Cerrar
+            </button>
+            <img src={viewingImage} alt="Comprobante de pago" className="w-full h-auto rounded-xl border border-slate-700 shadow-2xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

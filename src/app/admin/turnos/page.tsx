@@ -70,7 +70,7 @@ export default function AgendaTurnosPage() {
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
   const [selectedProf, setSelectedProf] = useState<string>('todos'); 
-  const [formProfId, setFormProfId] = useState<string>(''); // ✅ Estado independiente para el formulario
+  const [formProfId, setFormProfId] = useState<string>(''); 
   const [events, setEvents] = useState<any[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -101,9 +101,10 @@ export default function AgendaTurnosPage() {
   const [sessionStep, setSessionStep] = useState<'select' | 'form'>('select');
   const [isCheckingPlans, setIsCheckingPlans] = useState(false);
 
-  const [detailFiles, setDetailFiles] = useState({ orden: null as File | null, dniFrente: null as File | null, dniDorso: null as File | null });
-  const [detailPreviews, setDetailPreviews] = useState({ orden: '', dniFrente: '', dniDorso: '' });
-  const [detailDelete, setDetailDelete] = useState({ orden: false, dniFrente: false, dniDorso: false });
+  // ✅ AGREGADO: 'comprobante' a los estados de archivos del detalle
+  const [detailFiles, setDetailFiles] = useState({ orden: null as File | null, dniFrente: null as File | null, dniDorso: null as File | null, comprobante: null as File | null });
+  const [detailPreviews, setDetailPreviews] = useState({ orden: '', dniFrente: '', dniDorso: '', comprobante: '' });
+  const [detailDelete, setDetailDelete] = useState({ orden: false, dniFrente: false, dniDorso: false, comprobante: false });
 
   const [showClinicalForm, setShowClinicalForm] = useState(false);
   const [clinicalFormData, setClinicalFormData] = useState({
@@ -150,7 +151,6 @@ export default function AgendaTurnosPage() {
     setTurnoFiles({ orden: null, dniFrente: null, dniDorso: null });
     setTurnoPreviews({ orden: '', dniFrente: '', dniDorso: '' });
     
-    // ✅ Asignamos el profesional al formulario SIN cambiar el filtro global del calendario
     const profReal = profesionales.find(p => p._id !== 'todos');
     setFormProfId(selectedProf === 'todos' && profReal ? profReal._id : selectedProf);
   };
@@ -221,12 +221,15 @@ export default function AgendaTurnosPage() {
       motivo: info.event.extendedProps.motivo, notasInternas: info.event.extendedProps.notasInternas || '',
       pacienteId: info.event.extendedProps.pacienteId, profesionalId: info.event.extendedProps.profesionalId,
       ordenMedicaUrl: info.event.extendedProps.ordenMedicaUrl || '', dniFrenteUrl: info.event.extendedProps.dniFrenteUrl || '',
-      dniDorsoUrl: info.event.extendedProps.dniDorsoUrl || '', start: info.event.start, end: info.event.end,
+      dniDorsoUrl: info.event.extendedProps.dniDorsoUrl || '', 
+      comprobantePagoUrl: info.event.extendedProps.comprobantePagoUrl || '', // ✅ AGREGADO
+      start: info.event.start, end: info.event.end,
     };
     setSelectedTurno(turno);
-    setDetailFiles({ orden: null, dniFrente: null, dniDorso: null });
-    setDetailPreviews({ orden: '', dniFrente: '', dniDorso: '' });
-    setDetailDelete({ orden: false, dniFrente: false, dniDorso: false });
+    // ✅ AGREGADO: Inicializar estado del comprobante
+    setDetailFiles({ orden: null, dniFrente: null, dniDorso: null, comprobante: null });
+    setDetailPreviews({ orden: '', dniFrente: '', dniDorso: '', comprobante: '' });
+    setDetailDelete({ orden: false, dniFrente: false, dniDorso: false, comprobante: false });
     setActivePlans([]);
     setSelectedPlanId(null);
     setSessionStep('select');
@@ -257,9 +260,12 @@ export default function AgendaTurnosPage() {
       if (detailFiles.orden) formData.append('ordenMedica', detailFiles.orden);
       if (detailFiles.dniFrente) formData.append('dniFrente', detailFiles.dniFrente);
       if (detailFiles.dniDorso) formData.append('dniDorso', detailFiles.dniDorso);
+      if (detailFiles.comprobante) formData.append('comprobantePago', detailFiles.comprobante); // ✅ AGREGADO
+
       if (detailDelete.orden) formData.append('deleteOrden', 'true');
       if (detailDelete.dniFrente) formData.append('deleteDniFrente', 'true');
       if (detailDelete.dniDorso) formData.append('deleteDniDorso', 'true');
+      if (detailDelete.comprobante) formData.append('deleteComprobante', 'true'); // ✅ AGREGADO
 
       const res = await fetch(`/api/turnos?id=${selectedTurno.id}`, { method: 'PATCH', body: formData });
       if (res.ok) {
@@ -329,7 +335,7 @@ export default function AgendaTurnosPage() {
 
     const formDataToSend = new FormData();
     formDataToSend.append('pacienteId', formData.pacienteId);
-    formDataToSend.append('profesionalId', formProfId); // ✅ CORREGIDO: Usa formProfId en lugar de selectedProf
+    formDataToSend.append('profesionalId', formProfId); 
     formDataToSend.append('fechaInicio', fechaInicio.toISOString());
     formDataToSend.append('fechaFin', fechaFin.toISOString());
     formDataToSend.append('duracionMinutos', formData.duracion.toString());
@@ -401,13 +407,14 @@ export default function AgendaTurnosPage() {
     finally { setIsSubmittingSession(false); }
   };
 
-  const getDetailPreview = (type: 'orden' | 'dniFrente' | 'dniDorso', url: string) => {
+  // ✅ AGREGADO: 'comprobante' a los tipos de las funciones
+  const getDetailPreview = (type: 'orden' | 'dniFrente' | 'dniDorso' | 'comprobante', url: string) => {
     if (detailPreviews[type]) return detailPreviews[type];
     if (url && !detailDelete[type]) return url;
     return '';
   };
 
-  const handleDetailFileChange = (type: 'orden' | 'dniFrente' | 'dniDorso', file: File | null) => {
+  const handleDetailFileChange = (type: 'orden' | 'dniFrente' | 'dniDorso' | 'comprobante', file: File | null) => {
     setDetailFiles(prev => ({ ...prev, [type]: file }));
     setDetailDelete(prev => ({ ...prev, [type]: false }));
     if (file) {
@@ -417,7 +424,7 @@ export default function AgendaTurnosPage() {
     } else { setDetailPreviews(prev => ({ ...prev, [type]: '' })); }
   };
 
-  const handleRemoveExistingDetailImage = (type: 'orden' | 'dniFrente' | 'dniDorso') => {
+  const handleRemoveExistingDetailImage = (type: 'orden' | 'dniFrente' | 'dniDorso' | 'comprobante') => {
     setDetailDelete(prev => ({ ...prev, [type]: true }));
     setDetailFiles(prev => ({ ...prev, [type]: null }));
     setDetailPreviews(prev => ({ ...prev, [type]: '' }));
@@ -583,8 +590,8 @@ export default function AgendaTurnosPage() {
                       <div className="relative">
                         <FontAwesomeIcon icon={faUserMd} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                         <select
-                          value={formProfId} // ✅ CORREGIDO: Usa formProfId
-                          onChange={(e) => setFormProfId(e.target.value)} // ✅ CORREGIDO: Actualiza solo formProfId
+                          value={formProfId} 
+                          onChange={(e) => setFormProfId(e.target.value)} 
                           className="w-full pl-10 pr-10 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 appearance-none"
                         >
                           {profesionales.filter(p => p._id !== 'todos').map(p => (
@@ -722,16 +729,20 @@ export default function AgendaTurnosPage() {
                     <div><p className="text-xs text-slate-400 uppercase tracking-wider">Horario</p><p className="text-white font-medium">{new Date(selectedTurno.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(selectedTurno.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p></div>
                   </div>
                   {selectedTurno.motivo && (<div><p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Motivo de Consulta</p><p className="text-slate-300 bg-slate-800/30 p-3 rounded-lg text-sm">{selectedTurno.motivo}</p></div>)}
+                  
+                  {/* ✅ AGREGADO: Sección unificada de Documentación y Comprobantes */}
                   <div className="border-t border-slate-800 pt-4 mt-2">
-                    <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación Adjunta</h3>
-                    <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación y Comprobantes</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FileUpload label="Orden Médica" file={detailFiles.orden} preview={getDetailPreview('orden', selectedTurno.ordenMedicaUrl)} onChange={(file: File | null) => handleDetailFileChange('orden', file)} onRemove={() => { if (selectedTurno.ordenMedicaUrl && !detailFiles.orden) handleRemoveExistingDetailImage('orden'); else handleDetailFileChange('orden', null); }} />
-                      <div className="grid grid-cols-2 gap-3">
-                        <FileUpload label="DNI Frente" file={detailFiles.dniFrente} preview={getDetailPreview('dniFrente', selectedTurno.dniFrenteUrl)} onChange={(file: File | null) => handleDetailFileChange('dniFrente', file)} onRemove={() => { if (selectedTurno.dniFrenteUrl && !detailFiles.dniFrente) handleRemoveExistingDetailImage('dniFrente'); else handleDetailFileChange('dniFrente', null); }} />
-                        <FileUpload label="DNI Dorso" file={detailFiles.dniDorso} preview={getDetailPreview('dniDorso', selectedTurno.dniDorsoUrl)} onChange={(file: File | null) => handleDetailFileChange('dniDorso', file)} onRemove={() => { if (selectedTurno.dniDorsoUrl && !detailFiles.dniDorso) handleRemoveExistingDetailImage('dniDorso'); else handleDetailFileChange('dniDorso', null); }} />
-                      </div>
+                      <FileUpload label="Comprobante de Pago" file={detailFiles.comprobante} preview={getDetailPreview('comprobante', selectedTurno.comprobantePagoUrl)} onChange={(file: File | null) => handleDetailFileChange('comprobante', file)} onRemove={() => { if (selectedTurno.comprobantePagoUrl && !detailFiles.comprobante) handleRemoveExistingDetailImage('comprobante'); else handleDetailFileChange('comprobante', null); }} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <FileUpload label="DNI Frente" file={detailFiles.dniFrente} preview={getDetailPreview('dniFrente', selectedTurno.dniFrenteUrl)} onChange={(file: File | null) => handleDetailFileChange('dniFrente', file)} onRemove={() => { if (selectedTurno.dniFrenteUrl && !detailFiles.dniFrente) handleRemoveExistingDetailImage('dniFrente'); else handleDetailFileChange('dniFrente', null); }} />
+                      <FileUpload label="DNI Dorso" file={detailFiles.dniDorso} preview={getDetailPreview('dniDorso', selectedTurno.dniDorsoUrl)} onChange={(file: File | null) => handleDetailFileChange('dniDorso', file)} onRemove={() => { if (selectedTurno.dniDorsoUrl && !detailFiles.dniDorso) handleRemoveExistingDetailImage('dniDorso'); else handleDetailFileChange('dniDorso', null); }} />
                     </div>
                   </div>
+
                   <div>
                     <p className="text-xs text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-2"><FontAwesomeIcon icon={faInfoCircle} className="text-amber-500" /> Notas Internas</p>
                     <textarea value={selectedTurno.notasInternas} onChange={(e) => setSelectedTurno({ ...selectedTurno, notasInternas: e.target.value })} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none text-sm" rows={3} placeholder="Ej: Paciente debe traer estudios previos..." />
