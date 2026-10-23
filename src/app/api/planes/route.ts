@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+
 // ✅ POST: Crear un nuevo Plan de Tratamiento
 export async function POST(req: NextRequest) {
   try {

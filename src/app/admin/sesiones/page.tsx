@@ -13,7 +13,7 @@ import { FaArrowLeft } from 'react-icons/fa';
 
 interface Plan {
   _id: string;
-  paciente: any; // Puede ser objeto o string (ID) si falla el populate
+  paciente: any;
   profesional: any;
   diagnostico: string;
   objetivo: string;
@@ -59,9 +59,10 @@ export default function SesionesPage() {
     try {
       const res = await fetch('/api/planes');
       
-      // ✅ BLINDAJE 1: Verificar que la respuesta sea exitosa antes de parsear JSON
+      // ✅ MEJORA 1: Si falla, intentamos leer el mensaje de error real que envía el servidor
       if (!res.ok) {
-        throw new Error(`Error del servidor: ${res.status}`);
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error del servidor: ${res.status} ${res.statusText}`);
       }
       
       const data = await res.json();
@@ -72,9 +73,14 @@ export default function SesionesPage() {
         toast.error(data.message || 'Error al cargar los planes');
         setPlanes([]);
       }
-    } catch (error) {
-      console.error('Error al cargar planes:', error);
-      toast.error('Error de conexión. Verifica que la base de datos esté disponible.');
+    } catch (error: any) {
+      // ✅ MEJORA 2: Log detallado en consola para saber la causa raíz
+      console.error('❌ ERROR DETALLADO AL CARGAR PLANES:', error);
+      
+      // Solo mostramos toast si el error no es una cancelación de red normal
+      if (error.name !== 'AbortError') {
+        toast.error(`No se pudieron cargar los planes: ${error.message}`);
+      }
       setPlanes([]);
     } finally {
       setLoading(false);
@@ -86,27 +92,28 @@ export default function SesionesPage() {
     setLoadingHistorial(true);
     try {
       const res = await fetch(`/api/sesiones?planId=${plan._id}`);
-      if (!res.ok) throw new Error('Error en la respuesta');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error: ${res.status}`);
+      }
       
       const data = await res.json();
       if (data.success) {
-        // ✅ BLINDAJE 2: Asegurar que data.sesiones sea un array antes de ordenar
         const sesionesArray = Array.isArray(data.sesiones) ? data.sesiones : [];
         const sesionesOrdenadas = sesionesArray.sort((a: NotaSesion, b: NotaSesion) => b.numeroSesion - a.numeroSesion);
         setHistorial(sesionesOrdenadas);
       } else {
         setHistorial([]);
       }
-    } catch (error) {
-      console.error('Error al cargar el historial:', error);
-      toast.error('Error al cargar el historial');
+    } catch (error: any) {
+      console.error('❌ ERROR DETALLADO AL CARGAR HISTORIAL:', error);
+      toast.error(`Error al cargar el historial: ${error.message}`);
       setHistorial([]);
     } finally {
       setLoadingHistorial(false);
     }
   };
 
-  // ✅ BLINDAJE 3: Función segura para obtener nombres (evita "Cannot read properties of null")
   const getNombreCompleto = (persona: any, tipo: string) => {
     if (!persona || typeof persona !== 'object') return `${tipo} (No disponible)`;
     return `${persona.name || ''} ${persona.lastName || ''}`.trim() || `${tipo} (Sin nombre)`;
@@ -150,7 +157,6 @@ export default function SesionesPage() {
             </div>
           ) : (
             planes.map((plan) => {
-              // ✅ BLINDAJE 4: Evitar división por cero o NaN
               const total = plan.totalSesiones || 1;
               const completadas = plan.sesionesCompletadas || 0;
               const porcentaje = Math.min(100, Math.round((completadas / total) * 100));
@@ -199,9 +205,6 @@ export default function SesionesPage() {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* MODAL DE HISTORIAL CLÍNICO                 */}
-      {/* ========================================== */}
       {selectedPlan && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
