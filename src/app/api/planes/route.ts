@@ -4,11 +4,14 @@ import { authOptions } from '@/app/lib/auth';
 import connectDB from '@/app/lib/mongoose';
 import PlanTratamiento from '@/app/models/PlanTratamiento';
 
-connectDB();
+// ❌ ELIMINADO: connectDB(); de aquí arriba
 
 // ✅ GET: Obtener lista de planes (según rol) o buscar planes de un paciente
 export async function GET(req: NextRequest) {
   try {
+    // ✅ CORREGIDO: Esperamos a que la conexión a la BD esté lista antes de consultar
+    await connectDB(); 
+    
     const session = await getServerSession(authOptions);
     if (!session || !['admin', 'profesionales'].includes(session.user?.role || '')) {
       return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
@@ -18,7 +21,7 @@ export async function GET(req: NextRequest) {
     const pacienteId = searchParams.get('pacienteId');
     const profesionalIdParam = searchParams.get('profesionalId');
 
-    // 1. Búsqueda de planes activos de un paciente específico (Devuelve ARRAY para soportar múltiples dolencias)
+    // 1. Búsqueda de planes activos de un paciente específico
     if (pacienteId && profesionalIdParam) {
       const planes = await PlanTratamiento.find({
         paciente: pacienteId,
@@ -44,14 +47,16 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error('Error GET /api/planes:', error);
-    return NextResponse.json({ message: 'Error del servidor' }, { status: 500 });
+    return NextResponse.json({ message: 'Error del servidor al obtener los planes' }, { status: 500 });
   }
 }
-
 
 // ✅ POST: Crear un nuevo Plan de Tratamiento
 export async function POST(req: NextRequest) {
   try {
+    // ✅ CORREGIDO: Esperamos a que la conexión a la BD esté lista antes de crear
+    await connectDB();
+
     const session = await getServerSession(authOptions);
     if (!session || !['admin', 'profesionales'].includes(session.user?.role || '')) {
       return NextResponse.json({ message: 'No autorizado' }, { status: 403 });
