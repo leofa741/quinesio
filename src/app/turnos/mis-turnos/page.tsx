@@ -192,8 +192,8 @@ export default function MisTurnosPage() {
                     </div>
                   </div>
 
-                  {/* ✅ ACCIONES DEL PACIENTE: Solo si está pendiente */}
-                  {turno.estado === 'pendiente' && (
+                  {/* ✅ ACCIONES DEL PACIENTE: Solo si está confirmado */}
+                  {turno.estado === 'confirmado' && (
                     <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-slate-800">
                       <button
                         onClick={() => {
