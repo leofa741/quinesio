@@ -66,7 +66,6 @@ export async function GET(req: NextRequest) {
 
     const eventos = turnos.map(turno => {
       const pacienteName = `${turno.paciente.name} ${turno.paciente.lastName}`;
-      // ✅ NUEVO: Obtenemos el nombre del profesional para mostrarlo en el calendario
       const profesionalName = `${turno.profesional.name} ${turno.profesional.lastName}`;
 
       let color = '#3b82f6';
@@ -91,14 +90,15 @@ export async function GET(req: NextRequest) {
           ordenMedicaUrl: turno.ordenMedicaUrl || '',
           dniFrenteUrl: turno.dniFrenteUrl || '',
           dniDorsoUrl: turno.dniDorsoUrl || '',
+          comprobantePagoUrl: turno.comprobantePagoUrl || '', // ✅ ¡ESTA ES LA LÍNEA QUE FALTABA!
           pacienteId: turno.paciente._id,
           profesionalId: turno.profesional._id,
-          profesionalNombre: profesionalName, // ✅ NUEVO: Enviamos el nombre al frontend
+          profesionalNombre: profesionalName,
           tieneActividad: tieneActividad,
         }
       };
     });
-
+    
     return NextResponse.json({ success: true, eventos });
   } catch (error) {
     console.error('Error GET /api/turnos:', error);
