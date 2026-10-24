@@ -13,7 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle,
   faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faUserMd,
-  faNotesMedical, faImage, faChartLine, faPlusCircle, faExclamationTriangle
+  faNotesMedical, faImage, faChartLine, faPlusCircle, faExclamationTriangle, faExpand
 } from '@fortawesome/free-solid-svg-icons';
 import { FaArrowLeft } from 'react-icons/fa';
 import PlantillasClinicas from '@/app/components/plantillaclinica/PlantillasClinicas';
@@ -101,7 +101,6 @@ export default function AgendaTurnosPage() {
   const [sessionStep, setSessionStep] = useState<'select' | 'form'>('select');
   const [isCheckingPlans, setIsCheckingPlans] = useState(false);
 
-  // ✅ AGREGADO: 'comprobante' a los estados de archivos del detalle
   const [detailFiles, setDetailFiles] = useState({ orden: null as File | null, dniFrente: null as File | null, dniDorso: null as File | null, comprobante: null as File | null });
   const [detailPreviews, setDetailPreviews] = useState({ orden: '', dniFrente: '', dniDorso: '', comprobante: '' });
   const [detailDelete, setDetailDelete] = useState({ orden: false, dniFrente: false, dniDorso: false, comprobante: false });
@@ -222,11 +221,10 @@ export default function AgendaTurnosPage() {
       pacienteId: info.event.extendedProps.pacienteId, profesionalId: info.event.extendedProps.profesionalId,
       ordenMedicaUrl: info.event.extendedProps.ordenMedicaUrl || '', dniFrenteUrl: info.event.extendedProps.dniFrenteUrl || '',
       dniDorsoUrl: info.event.extendedProps.dniDorsoUrl || '', 
-      comprobantePagoUrl: info.event.extendedProps.comprobantePagoUrl || '', // ✅ AGREGADO
+      comprobantePagoUrl: info.event.extendedProps.comprobantePagoUrl || '', 
       start: info.event.start, end: info.event.end,
     };
     setSelectedTurno(turno);
-    // ✅ AGREGADO: Inicializar estado del comprobante
     setDetailFiles({ orden: null, dniFrente: null, dniDorso: null, comprobante: null });
     setDetailPreviews({ orden: '', dniFrente: '', dniDorso: '', comprobante: '' });
     setDetailDelete({ orden: false, dniFrente: false, dniDorso: false, comprobante: false });
@@ -260,12 +258,12 @@ export default function AgendaTurnosPage() {
       if (detailFiles.orden) formData.append('ordenMedica', detailFiles.orden);
       if (detailFiles.dniFrente) formData.append('dniFrente', detailFiles.dniFrente);
       if (detailFiles.dniDorso) formData.append('dniDorso', detailFiles.dniDorso);
-      if (detailFiles.comprobante) formData.append('comprobantePago', detailFiles.comprobante); // ✅ AGREGADO
+      if (detailFiles.comprobante) formData.append('comprobantePago', detailFiles.comprobante);
 
       if (detailDelete.orden) formData.append('deleteOrden', 'true');
       if (detailDelete.dniFrente) formData.append('deleteDniFrente', 'true');
       if (detailDelete.dniDorso) formData.append('deleteDniDorso', 'true');
-      if (detailDelete.comprobante) formData.append('deleteComprobante', 'true'); // ✅ AGREGADO
+      if (detailDelete.comprobante) formData.append('deleteComprobante', 'true');
 
       const res = await fetch(`/api/turnos?id=${selectedTurno.id}`, { method: 'PATCH', body: formData });
       if (res.ok) {
@@ -407,7 +405,6 @@ export default function AgendaTurnosPage() {
     finally { setIsSubmittingSession(false); }
   };
 
-  // ✅ AGREGADO: 'comprobante' a los tipos de las funciones
   const getDetailPreview = (type: 'orden' | 'dniFrente' | 'dniDorso' | 'comprobante', url: string) => {
     if (detailPreviews[type]) return detailPreviews[type];
     if (url && !detailDelete[type]) return url;
@@ -730,13 +727,56 @@ export default function AgendaTurnosPage() {
                   </div>
                   {selectedTurno.motivo && (<div><p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Motivo de Consulta</p><p className="text-slate-300 bg-slate-800/30 p-3 rounded-lg text-sm">{selectedTurno.motivo}</p></div>)}
                   
-                  {/* ✅ AGREGADO: Sección unificada de Documentación y Comprobantes */}
+                  {/* ✅ SECCIÓN MEJORADA: Documentación y Comprobantes */}
                   <div className="border-t border-slate-800 pt-4 mt-2">
-                    <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2"><FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación y Comprobantes</h3>
+                    <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación y Comprobantes
+                    </h3>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FileUpload label="Orden Médica" file={detailFiles.orden} preview={getDetailPreview('orden', selectedTurno.ordenMedicaUrl)} onChange={(file: File | null) => handleDetailFileChange('orden', file)} onRemove={() => { if (selectedTurno.ordenMedicaUrl && !detailFiles.orden) handleRemoveExistingDetailImage('orden'); else handleDetailFileChange('orden', null); }} />
-                      <FileUpload label="Comprobante de Pago" file={detailFiles.comprobante} preview={getDetailPreview('comprobante', selectedTurno.comprobantePagoUrl)} onChange={(file: File | null) => handleDetailFileChange('comprobante', file)} onRemove={() => { if (selectedTurno.comprobantePagoUrl && !detailFiles.comprobante) handleRemoveExistingDetailImage('comprobante'); else handleDetailFileChange('comprobante', null); }} />
+                      {/* Comprobante de Pago (Destacado) */}
+                      <div className="space-y-2">
+                        <label className="block text-sm text-slate-400 font-medium">Comprobante de Pago del Paciente</label>
+                        {selectedTurno.comprobantePagoUrl || detailPreviews.comprobante ? (
+                          <div className="relative group">
+                            <img 
+                              src={detailPreviews.comprobante || selectedTurno.comprobantePagoUrl} 
+                              alt="Comprobante de Pago" 
+                              className="w-full h-40 object-cover rounded-lg border border-sky-500/30 bg-slate-800 cursor-pointer hover:opacity-90 transition"
+                              onClick={() => window.open(detailPreviews.comprobante || selectedTurno.comprobantePagoUrl, '_blank')}
+                              title="Click para ver en tamaño completo"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-lg pointer-events-none">
+                              <span className="text-white text-sm font-medium flex items-center gap-2">
+                                <FontAwesomeIcon icon={faExpand} /> Ver en grande
+                              </span>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveExistingDetailImage('comprobante')} 
+                              className="absolute top-2 right-2 bg-red-500/90 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg" 
+                              title="Eliminar comprobante"
+                            >
+                              <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 hover:border-sky-500/50 transition">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <FontAwesomeIcon icon={faImage} className="w-8 h-8 text-slate-500 mb-2" />
+                              <p className="text-xs text-slate-400 text-center px-2">Click para subir o reemplazar</p>
+                            </div>
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleDetailFileChange('comprobante', e.target.files?.[0] || null)} />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Orden Médica */}
+                      <div className="space-y-2">
+                         <FileUpload label="Orden Médica" file={detailFiles.orden} preview={getDetailPreview('orden', selectedTurno.ordenMedicaUrl)} onChange={(file: File | null) => handleDetailFileChange('orden', file)} onRemove={() => { if (selectedTurno.ordenMedicaUrl && !detailFiles.orden) handleRemoveExistingDetailImage('orden'); else handleDetailFileChange('orden', null); }} />
+                      </div>
                     </div>
+                    
                     <div className="grid grid-cols-2 gap-3 mt-3">
                       <FileUpload label="DNI Frente" file={detailFiles.dniFrente} preview={getDetailPreview('dniFrente', selectedTurno.dniFrenteUrl)} onChange={(file: File | null) => handleDetailFileChange('dniFrente', file)} onRemove={() => { if (selectedTurno.dniFrenteUrl && !detailFiles.dniFrente) handleRemoveExistingDetailImage('dniFrente'); else handleDetailFileChange('dniFrente', null); }} />
                       <FileUpload label="DNI Dorso" file={detailFiles.dniDorso} preview={getDetailPreview('dniDorso', selectedTurno.dniDorsoUrl)} onChange={(file: File | null) => handleDetailFileChange('dniDorso', file)} onRemove={() => { if (selectedTurno.dniDorsoUrl && !detailFiles.dniDorso) handleRemoveExistingDetailImage('dniDorso'); else handleDetailFileChange('dniDorso', null); }} />
