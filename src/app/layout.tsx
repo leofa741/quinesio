@@ -4,8 +4,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Montserrat } from "next/font/google";
 
 
- 
-// @ts-expect-error Global CSS is loaded by Next.js and has no TypeScript module declaration.
 import "./globals.css";
 import Navbar from "./components/navbar/Navbar";
 import Footer from "./components/footer/Footer";
