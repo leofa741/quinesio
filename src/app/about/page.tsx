@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { siteConfig } from '@/app/lib/config/site';
 
 // ─────────────────────────────────────────────────────────────
 // 🔹 ICONOS MINIMALISTAS (Salud, movimiento y confianza)
@@ -55,20 +56,20 @@ export default function AboutPage() {
   ];
 
   const values = [
-    { 
-      icon: <Icons.HeartPulse />, 
-      title: 'Práctica Basada en Evidencia', 
-      desc: 'Cada protocolo de tratamiento se sustenta en la última evidencia científica, garantizando eficacia y seguridad en tu recuperación.' 
+    {
+      icon: <Icons.HeartPulse />,
+      title: 'Práctica Basada en Evidencia',
+      desc: 'Cada protocolo de tratamiento se sustenta en la última evidencia científica, garantizando eficacia y seguridad en tu recuperación.'
     },
-    { 
-      icon: <Icons.UserMd />, 
-      title: 'Profesionales Matriculados', 
-      desc: 'Nuestro equipo está conformado por licenciados en kinesiología con matrícula nacional y formación continua en sus especialidades.' 
+    {
+      icon: <Icons.UserMd />,
+      title: 'Profesionales Matriculados',
+      desc: 'Nuestro equipo está conformado por licenciados en kinesiología con matrícula nacional y formación continua en sus especialidades.'
     },
-    { 
-      icon: <Icons.ShieldCheck />, 
-      title: 'Gestión Integral de O.S.', 
-      desc: 'Nos ocupamos de toda la gestión administrativa y autorizaciones con las principales obras sociales y prepagas del país.' 
+    {
+      icon: <Icons.ShieldCheck />,
+      title: 'Gestión Integral de O.S.',
+      desc: 'Nos ocupamos de toda la gestión administrativa y autorizaciones con las principales obras sociales y prepagas del país.'
     },
   ];
 
@@ -86,7 +87,7 @@ export default function AboutPage() {
   return (
     <div className="relative min-h-screen bg-zinc-950 text-zinc-100 selection:bg-sky-500/30 overflow-x-hidden">
       <br /> <br /> <br /> <br /> <br />
-      
+
       {/* Fondo minimalista: glows sutiles con paleta nacional (Celeste/Azul/Ámbar) */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-[20%] right-0 w-[800px] h-[800px] bg-sky-500/5 rounded-full blur-[150px]" />
@@ -95,22 +96,26 @@ export default function AboutPage() {
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-        
+
         {/* ═══════════════════════════════════════════════════════
             HERO SECTION - ESENCIA
             ═══════════════════════════════════════════════════════ */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center mb-24 sm:mb-32">
-          
+
           {/* Imagen limpia y elegante */}
           <div className={`relative transition-all duration-1000 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/10 bg-zinc-900">
+
+            <div className="relative w-full h-80 sm:h-96 lg:h-[28rem] rounded-3xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center p-6">
               <Image
-                src="/img/Logo-removebg-preview.png" // Asegurate de tener una imagen de tu consultorio/equipo
-                alt="Equipo Kinesio.AR"
+                src={siteConfig.logo}
+                alt={siteConfig.name}
                 fill
-                className="object-cover object-center"
+                sizes="(max-width: 640px) 100vw, 80vw"
+                className="object-contain p-6 sm:p-10"
                 priority
               />
+
+
               <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-transparent" />
               <div className="absolute bottom-6 left-6 right-6">
                 <p className="text-white font-medium text-sm tracking-wide">Centro de Kinesiología Integral</p>
@@ -134,7 +139,7 @@ export default function AboutPage() {
             </div>
 
             <p className="text-lg text-zinc-400 leading-relaxed max-w-lg font-light">
-              En <span className="text-zinc-200 font-normal">Kinesio.AR</span> creemos que la salud es el fundamento de tu libertad. 
+              En <span className="text-zinc-200 font-normal">Kinesio.AR</span> creemos que la salud es el fundamento de tu libertad.
               Combinamos la excelencia profesional con la calidez humana, ofreciendo tratamientos personalizados con identidad y orgullo argentino.
             </p>
 
@@ -155,14 +160,14 @@ export default function AboutPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Link
-                href="/servicios"
+                href="/contact"
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-white text-zinc-950 font-medium text-sm tracking-wide transition-all duration-300 hover:bg-sky-50 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <span>Nuestras Especialidades</span>
                 <span className="group-hover:translate-x-1 transition-transform duration-300"><Icons.ArrowRight /></span>
               </Link>
               <Link
-                href="/contacto"
+                href="/contact"
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full border border-zinc-800 text-zinc-300 font-medium text-sm tracking-wide transition-all duration-300 hover:border-sky-500/50 hover:text-white active:scale-[0.98]"
               >
                 <span>Consultar por mi Obra Social</span>
@@ -197,13 +202,13 @@ export default function AboutPage() {
           <div className="relative max-w-3xl mx-auto">
             {/* Línea vertical sutil */}
             <div className="absolute left-0 sm:left-1/2 top-0 bottom-0 w-px bg-zinc-800 -translate-x-1/2" />
-            
+
             <div className="space-y-12">
               {timeline.map((item, index) => (
                 <div key={index} className={`relative flex flex-col sm:flex-row gap-8 ${index % 2 === 0 ? 'sm:flex-row-reverse' : ''}`}>
                   {/* Punto en la línea */}
                   <div className="absolute left-0 sm:left-1/2 top-1.5 w-3 h-3 rounded-full bg-zinc-950 border-2 border-sky-500/50 -translate-x-1/2 z-10" />
-                  
+
                   <div className={`sm:w-1/2 ${index % 2 === 0 ? 'sm:pl-12 sm:text-left' : 'sm:pr-12 sm:text-right'} pl-8 sm:pl-0`}>
                     <span className="text-sm font-medium text-sky-400 mb-1 block">{item.year}</span>
                     <h3 className="text-xl font-normal text-white mb-2">{item.title}</h3>
@@ -241,38 +246,14 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ═══════════════════════════════════════════════════════
-            TESTIMONIOS - SUTILES
-            ═══════════════════════════════════════════════════════ */}
-        <section className="mb-24 sm:mb-32">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-sky-400 mb-4 block">Testimonios</span>
-            <h2 className="text-3xl sm:text-4xl font-light text-white">La voz de nuestros pacientes</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="relative p-8 rounded-2xl bg-zinc-900/50 border border-zinc-800/50">
-                <div className="absolute top-6 right-6">
-                  <Icons.Quote />
-                </div>
-                <p className="text-zinc-300 leading-relaxed font-light mb-6 relative z-10 italic">
-                  "{testimonial.text}"
-                </p>
-                <div>
-                  <p className="text-white font-medium text-sm">{testimonial.name}</p>
-                  <p className="text-zinc-500 text-xs">{testimonial.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+    
 
         {/* ═══════════════════════════════════════════════════════
             CTA FINAL - LIMPIO
             ═══════════════════════════════════════════════════════ */}
         <section className="relative rounded-3xl border border-zinc-800 bg-zinc-900/50 p-8 sm:p-16 text-center overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-sky-500/5 to-transparent pointer-events-none" />
-          
+
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
             <h2 className="text-3xl sm:text-4xl font-light text-white">
               ¿Listo para recuperar tu <span className="font-serif italic text-sky-300">movimiento</span>?
@@ -282,7 +263,7 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <a
-                href="https://wa.me/5491141461312?text=Hola,%20me%20interesa%20consultar%20por%20un%20turno%20o%20mi%20obra%20social"
+                href={`https://wa.me/${siteConfig.contact.whatsappNumber}?text=${encodeURIComponent(siteConfig.contact.whatsappMessage)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-emerald-600 text-white font-medium text-sm tracking-wide transition-all duration-300 hover:bg-emerald-500 hover:scale-[1.02] active:scale-[0.98]"
@@ -291,7 +272,7 @@ export default function AboutPage() {
                 <span>Consultar por WhatsApp</span>
               </a>
               <Link
-                href="/servicios"
+                href="/contact"
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full border border-zinc-700 text-zinc-300 font-medium text-sm tracking-wide transition-all duration-300 hover:border-white/50 hover:text-white active:scale-[0.98]"
               >
                 <span>Ver Especialidades</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { siteConfig } from '@/app/lib/config/site';
 
 
 // ─────────────────────────────────────────────────────────────
@@ -43,7 +44,7 @@ export default function Contact() {
   const [status, setStatus] = useState<{ type: 'success' | 'error' | ''; message: string }>({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
 
-  const whatsappNumber = '5491141461312';
+  const whatsappNumber = siteConfig.contact.whatsappNumber;
   const whatsappMessage = 'Hola, me interesa consultar por un turno o servicio kinésico';
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -161,9 +162,9 @@ export default function Contact() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-200">Email</p>
-                    <a href="mailto:contacto@kinesio.ar" className="text-sm text-zinc-400 hover:text-sky-300 transition-colors">
-                      contacto@kinesio.ar
-                    </a>
+                    <p className="text-sm text-zinc-400">
+                      <a href={`mailto:${siteConfig.contact.email}`} className="hover:text-sky-400 transition-colors">{siteConfig.contact.email}</a>  
+                    </p>
                   </div>
                 </div>
 

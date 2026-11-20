@@ -3,15 +3,16 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useCallback } from 'react';
+import { siteConfig } from '@/app/lib/config/site';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const companyName = 'Kinesio.AR';
+  const companyName = siteConfig.name;
   const [showShareModal, setShowShareModal] = useState(false);
 
-  const watsapp = 5491141461312;
-  const mensaje = 'Hola,%20me%20interesa%20consultar%20por%20un%20turno%20o%20servicio%20kinésico';
-  const EMAIL_CONTACTO = 'contacto@kinesio.ar';
+  const watsapp = siteConfig.contact.whatsappNumber;
+  const mensaje = siteConfig.contact.whatsappMessage;
+  const EMAIL_CONTACTO = siteConfig.contact.email;
 
   // ─────────────────────────────────────────────────────────
   // FUNCIONES DE COMPARTIR
@@ -20,7 +21,7 @@ const Footer = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: companyName,
+          title: siteConfig.name,
           text: 'Te comparto este centro de kinesiología de excelencia',
           url: window.location.href,
         });
@@ -140,8 +141,8 @@ const Footer = () => {
                   <span className="relative">
                     <span className={`absolute inset-0 bg-gradient-to-r ${gradients.accent} rounded-xl blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-700`} />
                     <Image
-                      src="/img/Logo-removebg-preview.png"
-                      alt={companyName}
+                      src={siteConfig.logo}
+                      alt={siteConfig.name}
                       width={200}
                       height={95}
                       className="relative transition-transform duration-500 group-hover:scale-[1.02]"

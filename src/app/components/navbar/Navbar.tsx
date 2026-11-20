@@ -19,6 +19,8 @@ import { AuthContext } from '@/app/context/AuthContext';
 import { faInstagram, faLinkedin, faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import { useRouter } from 'next/navigation';
 
+import {siteConfig} from '@/app/lib/config/site';
+
 // ─────────────────────────────────────────────────────────────
 // TIPOS
 // ─────────────────────────────────────────────────────────────
@@ -63,8 +65,8 @@ export default function Navbar() {
   const [isMounted, setIsMounted] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const watsapp = 5491111223344;
-  const mensaje = 'Hola,%20me%20interesa%20consultar%20por%20un%20turno%20o%20servicio%20kinésico';
+  const watsapp = siteConfig.contact.whatsappNumber;
+  const mensaje = siteConfig.contact.whatsappMessage;
 
   useEffect(() => {
     return () => {
@@ -184,8 +186,8 @@ export default function Navbar() {
   };
 
   const socialLinks: SocialLink[] = [
-    { icon: faInstagram, href: 'https://instagram.com', label: 'Instagram' },
-    { icon: faLinkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
+    { icon: faInstagram, href: siteConfig.social.instagram, label: 'Instagram' },
+    { icon: faLinkedin, href: siteConfig.social.linkedin, label: 'LinkedIn' },
     { icon: faWhatsapp, href: `https://wa.me/${watsapp}?text=${mensaje}`, label: 'WhatsApp' },
   ];
 
@@ -221,8 +223,8 @@ export default function Navbar() {
                   <div className="relative">
                     <span className="absolute inset-0 bg-gradient-to-r from-sky-400/30 via-blue-500/30 to-amber-400/30 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     <Image
-                      src="/img/Logo-removebg-preview.png"
-                      alt="Kinesio.AR"
+                      src={siteConfig.logo}
+                      alt={siteConfig.name}
                       width={scrolled ? 60 : 100}
                       height={scrolled ? 60 : 100}
                       priority
@@ -231,7 +233,7 @@ export default function Navbar() {
                   </div>
                   <span className={`text-[15px] tracking-[0.4em] uppercase mt-0 font-light transition-colors duration-500 flex items-center gap-2 ${scrolled ? 'text-slate-500' : 'text-slate-400'
                     } group-hover:text-sky-200`}>
-                    Kinesalud<span className="text-sky-400">.AR 🇦🇷</span>
+                    {siteConfig.name}<span className="text-sky-400">.AR 🇦🇷</span>
                   </span>
                 </div>
               </Link>

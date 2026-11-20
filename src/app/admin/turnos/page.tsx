@@ -13,8 +13,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faCalendarPlus, faClock, faTimes, faSave, faCheckCircle, faInfoCircle,
   faFileMedical, faTrash, faUserPlus, faSearch, faSpinner, faUserMd,
-  faNotesMedical, faImage, faChartLine, faPlusCircle, faExclamationTriangle, faExpand
+  faNotesMedical, faImage, faChartLine, faPlusCircle, faExclamationTriangle, faExpand,
+  faEnvelope, faPhone // ✅ AGREGADOS
 } from '@fortawesome/free-solid-svg-icons';
+import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'; // ✅ AGREGADO
 import { FaArrowLeft } from 'react-icons/fa';
 import PlantillasClinicas from '@/app/components/plantillaclinica/PlantillasClinicas';
 
@@ -67,10 +69,11 @@ export default function AgendaTurnosPage() {
   const router = useRouter();
   const calendarRef = useRef<any>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const canCreateTurnos = session?.user?.role === 'admin' || session?.user?.role === 'administrativos';
 
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
-  const [selectedProf, setSelectedProf] = useState<string>('todos'); 
-  const [formProfId, setFormProfId] = useState<string>(''); 
+  const [selectedProf, setSelectedProf] = useState<string>('todos');
+  const [formProfId, setFormProfId] = useState<string>('');
   const [events, setEvents] = useState<any[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -149,7 +152,7 @@ export default function AgendaTurnosPage() {
     setIsSearching(false);
     setTurnoFiles({ orden: null, dniFrente: null, dniDorso: null });
     setTurnoPreviews({ orden: '', dniFrente: '', dniDorso: '' });
-    
+
     const profReal = profesionales.find(p => p._id !== 'todos');
     setFormProfId(selectedProf === 'todos' && profReal ? profReal._id : selectedProf);
   };
@@ -209,6 +212,10 @@ export default function AgendaTurnosPage() {
   };
 
   const handleDateSelect = (selectInfo: any) => {
+    if (!canCreateTurnos) {
+      toast.error('No tienes permisos para crear turnos.');
+      return;
+    }
     setSelectedDate(selectInfo.start);
     setFormData(prev => ({ ...prev, hora: selectInfo.startStr.split('T')[1].substring(0, 5) }));
     handleOpenNewTurno();
@@ -218,10 +225,16 @@ export default function AgendaTurnosPage() {
     const turno = {
       id: info.event.id, title: info.event.title, estado: info.event.extendedProps.estado,
       motivo: info.event.extendedProps.motivo, notasInternas: info.event.extendedProps.notasInternas || '',
-      pacienteId: info.event.extendedProps.pacienteId, profesionalId: info.event.extendedProps.profesionalId,
+      pacienteId: info.event.extendedProps.pacienteId, 
+      pacienteNombre: info.event.extendedProps.pacienteNombre || 'Paciente',
+      pacienteTelefono: info.event.extendedProps.pacienteTelefono || '', // ✅ AGREGADO
+      profesionalId: info.event.extendedProps.profesionalId,
+      profesionalNombre: info.event.extendedProps.profesionalNombre || 'Profesional',
+      profesionalEmail: info.event.extendedProps.profesionalEmail || '', // ✅ AGREGADO
+      profesionalTelefono: info.event.extendedProps.profesionalTelefono || '', // ✅ AGREGADO
       ordenMedicaUrl: info.event.extendedProps.ordenMedicaUrl || '', dniFrenteUrl: info.event.extendedProps.dniFrenteUrl || '',
-      dniDorsoUrl: info.event.extendedProps.dniDorsoUrl || '', 
-      comprobantePagoUrl: info.event.extendedProps.comprobantePagoUrl || '', 
+      dniDorsoUrl: info.event.extendedProps.dniDorsoUrl || '',
+      comprobantePagoUrl: info.event.extendedProps.comprobantePagoUrl || '',
       start: info.event.start, end: info.event.end,
     };
     setSelectedTurno(turno);
@@ -320,6 +333,10 @@ export default function AgendaTurnosPage() {
 
   const handleSubmitTurno = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canCreateTurnos) {
+      toast.error('No tienes permisos para crear turnos.');
+      return;
+    }
     if (!selectedDate || !formData.pacienteId || !formData.pacienteNombre) { toast.error('Selecciona o crea un paciente primero'); return; }
 
     const [hours, minutes] = formData.hora.split(':');
@@ -333,7 +350,7 @@ export default function AgendaTurnosPage() {
 
     const formDataToSend = new FormData();
     formDataToSend.append('pacienteId', formData.pacienteId);
-    formDataToSend.append('profesionalId', formProfId); 
+    formDataToSend.append('profesionalId', formProfId);
     formDataToSend.append('fechaInicio', fechaInicio.toISOString());
     formDataToSend.append('fechaFin', fechaFin.toISOString());
     formDataToSend.append('duracionMinutos', formData.duracion.toString());
@@ -486,9 +503,11 @@ export default function AgendaTurnosPage() {
               )}
             </p>
           </div>
-          <button onClick={handleOpenNewTurno} className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2">
-            <FontAwesomeIcon icon={faCalendarPlus} /> <span>Nuevo Turno</span>
-          </button>
+          {canCreateTurnos && (
+            <button onClick={handleOpenNewTurno} className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-lg shadow-sky-900/20 hover:shadow-sky-500/20 hover:-translate-y-0.5 flex items-center justify-center gap-2">
+              <FontAwesomeIcon icon={faCalendarPlus} /> <span>Nuevo Turno</span>
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
@@ -539,29 +558,47 @@ export default function AgendaTurnosPage() {
               const profesionalNombre = arg.event.extendedProps.profesionalNombre;
               const necesitaRegistro = (estado === 'confirmado' || estado === 'completado') && !tieneActividad;
 
+              const getProfColor = (name: string) => {
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                  hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const colors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-cyan-500', 'bg-teal-500', 'bg-orange-500', 'bg-rose-500'];
+                return colors[Math.abs(hash) % colors.length];
+              };
+
+              const profColorClass = profesionalNombre ? getProfColor(profesionalNombre) : 'bg-slate-500';
+              const initials = profesionalNombre
+                ? profesionalNombre.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
+                : '??';
+
               return (
                 <div className="flex flex-col justify-center h-full text-white overflow-hidden px-1.5 py-1 text-[11px] leading-tight">
-                  <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="flex items-center gap-2 mb-1">
                     {necesitaRegistro ? (
                       <a
                         href={`/admin/seguimiento-actividades/nuevo?turnoId=${turnoId}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-shrink-0 w-4 h-4 flex items-center justify-center bg-amber-500/20 border border-amber-400/50 rounded hover:bg-amber-500 hover:text-white transition-all cursor-pointer"
+                        className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-amber-500/20 border border-amber-400/50 rounded hover:bg-amber-500 hover:text-white transition-all cursor-pointer relative"
                         title="Registrar actividad"
                       >
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="w-2.5 h-2.5" />
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
+                        <span className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-slate-900 ${profColorClass}`}></span>
                       </a>
                     ) : (
-                      <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-white/40"></span>
+                      <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-[11px] font-bold text-white shadow-md ring-2 ring-white/30 ${profColorClass}`}>
+                        {initials}
+                      </span>
                     )}
-                    <span className="font-bold truncate">{arg.event.title}</span>
+                    <span className="font-bold truncate text-[12px]">{arg.event.title}</span>
                   </div>
                   {profesionalNombre && (
-                    <div className="pl-6 text-[10px] opacity-80 truncate font-medium">
+                    <div className="pl-8 text-[10px] opacity-90 truncate font-medium flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${profColorClass}`}></span>
                       {profesionalNombre}
                     </div>
                   )}
-                  <div className="pl-6 text-[10px] opacity-70 truncate">
+                  <div className="pl-8 text-[10px] opacity-70 truncate">
                     {arg.timeText}
                   </div>
                 </div>
@@ -587,8 +624,8 @@ export default function AgendaTurnosPage() {
                       <div className="relative">
                         <FontAwesomeIcon icon={faUserMd} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                         <select
-                          value={formProfId} 
-                          onChange={(e) => setFormProfId(e.target.value)} 
+                          value={formProfId}
+                          onChange={(e) => setFormProfId(e.target.value)}
                           className="w-full pl-10 pr-10 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 appearance-none"
                         >
                           {profesionales.filter(p => p._id !== 'todos').map(p => (
@@ -600,7 +637,6 @@ export default function AgendaTurnosPage() {
                         </div>
                       </div>
                     </div>
-
                     <div>
                       <label className="block text-sm text-slate-400 mb-1">Buscar Paciente</label>
                       <div className="relative">
@@ -716,6 +752,32 @@ export default function AgendaTurnosPage() {
                   <h2 className="text-xl font-bold text-white flex items-center gap-2"><FontAwesomeIcon icon={faFileMedical} className="text-sky-500" /> Ficha del Turno</h2>
                   <button onClick={() => setDetailModalOpen(false)} className="text-slate-400 hover:text-white"><FontAwesomeIcon icon={faTimes} className="w-5 h-5" /></button>
                 </div>
+                
+                {/* ✅ NUEVO HEADER: Información del Profesional */}
+                <div className="bg-sky-900/20 border border-sky-500/30 rounded-xl p-4 mb-4">
+                  <h3 className="text-sm font-semibold text-sky-400 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                    <FontAwesomeIcon icon={faUserMd} /> Profesional Asignado
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <FontAwesomeIcon icon={faUserMd} className="text-sky-500 w-4" />
+                      <span className="font-medium text-white">{selectedTurno.profesionalNombre}</span>
+                    </div>
+                    {selectedTurno.profesionalEmail && (
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <FontAwesomeIcon icon={faEnvelope} className="text-sky-500 w-4" />
+                        <span>{selectedTurno.profesionalEmail}</span>
+                      </div>
+                    )}
+                    {selectedTurno.profesionalTelefono && (
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <FontAwesomeIcon icon={faPhone} className="text-sky-500 w-4" />
+                        <span>{selectedTurno.profesionalTelefono}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between items-start">
                     <p className="text-xl font-semibold text-white">{selectedTurno.title}</p>
@@ -726,22 +788,20 @@ export default function AgendaTurnosPage() {
                     <div><p className="text-xs text-slate-400 uppercase tracking-wider">Horario</p><p className="text-white font-medium">{new Date(selectedTurno.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {new Date(selectedTurno.end).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs</p></div>
                   </div>
                   {selectedTurno.motivo && (<div><p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Motivo de Consulta</p><p className="text-slate-300 bg-slate-800/30 p-3 rounded-lg text-sm">{selectedTurno.motivo}</p></div>)}
-                  
-                  {/* ✅ SECCIÓN MEJORADA: Documentación y Comprobantes */}
+
                   <div className="border-t border-slate-800 pt-4 mt-2">
                     <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
                       <FontAwesomeIcon icon={faImage} className="text-sky-500" /> Documentación y Comprobantes
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Comprobante de Pago (Destacado) */}
                       <div className="space-y-2">
                         <label className="block text-sm text-slate-400 font-medium">Comprobante de Pago del Paciente</label>
                         {selectedTurno.comprobantePagoUrl || detailPreviews.comprobante ? (
                           <div className="relative group">
-                            <img 
-                              src={detailPreviews.comprobante || selectedTurno.comprobantePagoUrl} 
-                              alt="Comprobante de Pago" 
+                            <img
+                              src={detailPreviews.comprobante || selectedTurno.comprobantePagoUrl}
+                              alt="Comprobante de Pago"
                               className="w-full h-40 object-cover rounded-lg border border-sky-500/30 bg-slate-800 cursor-pointer hover:opacity-90 transition"
                               onClick={() => window.open(detailPreviews.comprobante || selectedTurno.comprobantePagoUrl, '_blank')}
                               title="Click para ver en tamaño completo"
@@ -751,10 +811,10 @@ export default function AgendaTurnosPage() {
                                 <FontAwesomeIcon icon={faExpand} /> Ver en grande
                               </span>
                             </div>
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveExistingDetailImage('comprobante')} 
-                              className="absolute top-2 right-2 bg-red-500/90 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg" 
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExistingDetailImage('comprobante')}
+                              className="absolute top-2 right-2 bg-red-500/90 text-white p-1.5 rounded-full hover:bg-red-600 transition shadow-lg"
                               title="Eliminar comprobante"
                             >
                               <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
@@ -771,12 +831,11 @@ export default function AgendaTurnosPage() {
                         )}
                       </div>
 
-                      {/* Orden Médica */}
                       <div className="space-y-2">
-                         <FileUpload label="Orden Médica" file={detailFiles.orden} preview={getDetailPreview('orden', selectedTurno.ordenMedicaUrl)} onChange={(file: File | null) => handleDetailFileChange('orden', file)} onRemove={() => { if (selectedTurno.ordenMedicaUrl && !detailFiles.orden) handleRemoveExistingDetailImage('orden'); else handleDetailFileChange('orden', null); }} />
+                        <FileUpload label="Orden Médica" file={detailFiles.orden} preview={getDetailPreview('orden', selectedTurno.ordenMedicaUrl)} onChange={(file: File | null) => handleDetailFileChange('orden', file)} onRemove={() => { if (selectedTurno.ordenMedicaUrl && !detailFiles.orden) handleRemoveExistingDetailImage('orden'); else handleDetailFileChange('orden', null); }} />
                       </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-3 mt-3">
                       <FileUpload label="DNI Frente" file={detailFiles.dniFrente} preview={getDetailPreview('dniFrente', selectedTurno.dniFrenteUrl)} onChange={(file: File | null) => handleDetailFileChange('dniFrente', file)} onRemove={() => { if (selectedTurno.dniFrenteUrl && !detailFiles.dniFrente) handleRemoveExistingDetailImage('dniFrente'); else handleDetailFileChange('dniFrente', null); }} />
                       <FileUpload label="DNI Dorso" file={detailFiles.dniDorso} preview={getDetailPreview('dniDorso', selectedTurno.dniDorsoUrl)} onChange={(file: File | null) => handleDetailFileChange('dniDorso', file)} onRemove={() => { if (selectedTurno.dniDorsoUrl && !detailFiles.dniDorso) handleRemoveExistingDetailImage('dniDorso'); else handleDetailFileChange('dniDorso', null); }} />
@@ -788,7 +847,24 @@ export default function AgendaTurnosPage() {
                     <textarea value={selectedTurno.notasInternas} onChange={(e) => setSelectedTurno({ ...selectedTurno, notasInternas: e.target.value })} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none text-sm" rows={3} placeholder="Ej: Paciente debe traer estudios previos..." />
                   </div>
                 </div>
+                
                 <div className="flex flex-col gap-3 pt-4 border-t border-slate-800">
+                  {/* ✅ NUEVO BOTÓN: WhatsApp Personalizado */}
+                  {selectedTurno.pacienteTelefono ? (
+                    <a
+                      href={`https://wa.me/${selectedTurno.pacienteTelefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedTurno.pacienteNombre}, te escribo de parte del ${selectedTurno.profesionalNombre} para confirmar tu turno del ${new Date(selectedTurno.start).toLocaleDateString('es-AR')} a las ${new Date(selectedTurno.start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} hs.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2 shadow-lg shadow-green-900/30"
+                    >
+                      <FontAwesomeIcon icon={faWhatsapp} className="text-lg" /> Enviar recordatorio por WhatsApp
+                    </a>
+                  ) : (
+                    <button disabled className="px-4 py-2.5 bg-slate-700 text-slate-400 rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-not-allowed">
+                      <FontAwesomeIcon icon={faWhatsapp} className="text-lg" /> Teléfono del paciente no disponible
+                    </button>
+                  )}
+
                   {selectedTurno.estado !== 'cancelado' && selectedTurno.estado !== 'completado' && (
                     <button onClick={() => handleCancelTurno()} disabled={isActionLoading} className="px-4 py-2.5 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/10 transition font-medium disabled:opacity-50 flex items-center justify-center gap-2">
                       <FontAwesomeIcon icon={faTrash} /> Cancelar Turno
@@ -807,7 +883,7 @@ export default function AgendaTurnosPage() {
                   )}
                   {selectedTurno.start && selectedTurno.end && (
                     <a
-                      href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Turno: ${selectedTurno.paciente?.name || 'Paciente'}`)}&dates=${new Date(selectedTurno.start).toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(selectedTurno.end).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(`Motivo: ${selectedTurno.motivo || 'Consulta'}`)}&location=${encodeURIComponent('Centro Kinesiológico')}`}
+                      href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Turno: ${selectedTurno.pacienteNombre}`)}&dates=${new Date(selectedTurno.start).toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(selectedTurno.end).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(`Motivo: ${selectedTurno.motivo || 'Consulta'}`)}&location=${encodeURIComponent('Centro Kinesiológico')}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-4 py-2.5 bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 rounded-lg font-medium transition flex items-center justify-center gap-2"
@@ -828,6 +904,7 @@ export default function AgendaTurnosPage() {
               </>
             ) : (
               <div className="space-y-6">
+                {/* ... (El resto del formulario de sesión clínica se mantiene igual) ... */}
                 <div className="flex justify-between items-center mb-2">
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <FontAwesomeIcon icon={faNotesMedical} className="text-sky-500" />
@@ -837,7 +914,6 @@ export default function AgendaTurnosPage() {
                     <FontAwesomeIcon icon={faTimes} /> Cerrar
                   </button>
                 </div>
-
                 {sessionStep === 'select' ? (
                   <div className="space-y-4">
                     <p className="text-slate-300">Este paciente tiene <strong>{activePlans.length}</strong> plan(es) de tratamiento activo(s) con este profesional. ¿A cuál pertenece esta sesión?</p>
@@ -879,7 +955,6 @@ export default function AgendaTurnosPage() {
                         <input placeholder="Objetivo del tratamiento (Opcional)" value={clinicalFormData.objetivo} onChange={e => setClinicalFormData({ ...clinicalFormData, objetivo: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none" />
                       </div>
                     )}
-
                     <PlantillasClinicas onSelect={(plantilla) => {
                       setClinicalFormData({
                         ...clinicalFormData,
@@ -889,7 +964,6 @@ export default function AgendaTurnosPage() {
                       });
                       toast.info(`📋 Plantilla "${plantilla.nombre}" aplicada`);
                     }} />
-
                     <div className="space-y-3">
                       <h3 className="text-sm font-semibold text-sky-400">{selectedPlanId === 'new' ? '2. Registro de la Primera Sesión' : 'Registro de la Sesión de Hoy'}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -911,7 +985,6 @@ export default function AgendaTurnosPage() {
                         <textarea value={clinicalFormData.proximosPasos} onChange={e => setClinicalFormData({ ...clinicalFormData, proximosPasos: e.target.value })} className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-sky-500 focus:outline-none resize-none" rows={2} placeholder="Ej: Continuar con ejercicios en casa..." />
                       </div>
                     </div>
-
                     <div className="flex gap-3 pt-4 border-t border-slate-800">
                       <button type="button" onClick={() => setSessionStep('select')} className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-800 transition">
                         ← Volver a seleccionar

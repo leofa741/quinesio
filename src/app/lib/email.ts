@@ -12,6 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+
 // 2. Función genérica de envío
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
   try {

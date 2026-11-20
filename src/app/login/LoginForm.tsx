@@ -7,6 +7,7 @@ import { signIn, useSession, getSession } from 'next-auth/react';
 import Image from 'next/image';
 import { AuthContext } from '../context/AuthContext';
 import Link from 'next/link';
+import { siteConfig } from '@/app/lib/config/site';
 
 // ─────────────────────────────────────────────────────────────
 // ICONOS SVG (todos en minúscula para evitar errores de TypeScript)
@@ -220,7 +221,7 @@ export default function LoginForm() {
         <div className="relative z-10 flex flex-col items-center gap-6">
           <div className="relative">
             <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 rounded-full blur-xl opacity-40 animate-pulse" />
-            <Image src="/img/Logo-removebg-preview.png" alt="Kinesio.AR" width={60} height={60} className="relative animate-bounce-slow" />
+            <Image src={siteConfig.logo} alt="Kinesio.AR" width={60} height={60} className="relative animate-bounce-slow" />
           </div>
           
           <div className="relative">
@@ -264,12 +265,12 @@ export default function LoginForm() {
       <div className="relative z-10 w-full max-w-md animate-fadeInUp">
         <div className={`absolute -inset-1 bg-gradient-to-r ${gradients.accent} rounded-3xl opacity-20 blur-xl`} aria-hidden="true" />
 
-        <div className="relative bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 border border-white/10 shadow-2xl shadow-purple-900/30">
+        <div className="relative bg-slate-900/80 backdrop-blur-xl mt-40 rounded-2xl p-8 border border-white/10 shadow-2xl shadow-purple-900/30">
           {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="relative group">
               <span className={`absolute inset-0 bg-gradient-to-r ${gradients.accent} rounded-xl blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500`} aria-hidden="true" />
-              <Image src="/img/Logo-removebg-preview.png" alt="Kinesio.AR" width={100} height={100} priority className="relative transition-transform duration-300 group-hover:scale-[1.02]" />
+              <Image src={siteConfig.logo}   alt="Kinesio.AR" width={100} height={100} priority className="relative transition-transform duration-300 group-hover:scale-[1.02]" />
             </div>
           </div>
 

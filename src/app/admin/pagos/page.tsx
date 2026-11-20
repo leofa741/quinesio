@@ -25,7 +25,7 @@ export default function PagosPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
-  const [viewingImage, setViewingImage] = useState<string | null>(null); // ✅ Para ver la imagen
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated') fetchProfesionales();
@@ -123,7 +123,6 @@ export default function PagosPage() {
           </div>
         </div>
 
-        {/* ... (Mantén tus tarjetas de resumen y filtros aquí, son correctas) ... */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 flex items-center justify-between">
             <div>
@@ -165,15 +164,9 @@ export default function PagosPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
+              {/* ✅ CORREGIDO: Sin saltos de línea ni comentarios dentro del <tr> */}
               <thead className="bg-slate-950/50 text-slate-400 uppercase text-xs">
-                <tr>
-                  <th className="px-6 py-4">Fecha / Paciente</th>
-                  <th className="px-6 py-4">Profesional</th>
-                  <th className="px-6 py-4 text-right">Monto Total</th>
-                  <th className="px-6 py-4 text-center">Comprobante</th> {/* ✅ NUEVA COLUMNA */}
-                  <th className="px-6 py-4 text-center">Estado Cobro</th>
-                  <th className="px-6 py-4 text-right">Acciones</th>
-                </tr>
+                <tr><th className="px-6 py-4">Fecha / Paciente</th><th className="px-6 py-4">Profesional</th><th className="px-6 py-4 text-right">Monto Total</th><th className="px-6 py-4 text-center">Comprobante</th><th className="px-6 py-4 text-center">Estado Cobro</th><th className="px-6 py-4 text-right">Acciones</th></tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {turnos.length === 0 ? (
@@ -197,13 +190,9 @@ export default function PagosPage() {
                           )}
                         </td>
 
-                        {/* ✅ COLUMNA DE COMPROBANTE */}
                         <td className="px-6 py-4 text-center">
                           {turno.comprobantePagoUrl ? (
-                            <button 
-                              onClick={() => setViewingImage(turno.comprobantePagoUrl)}
-                              className="inline-flex items-center gap-1 px-3 py-1 bg-sky-500/20 text-sky-400 rounded-full text-xs font-medium hover:bg-sky-500/30 transition"
-                            >
+                            <button onClick={() => setViewingImage(turno.comprobantePagoUrl)} className="inline-flex items-center gap-1 px-3 py-1 bg-sky-500/20 text-sky-400 rounded-full text-xs font-medium hover:bg-sky-500/30 transition">
                               <FontAwesomeIcon icon={faEye} /> Ver Imagen
                             </button>
                           ) : (
@@ -245,7 +234,6 @@ export default function PagosPage() {
         </div>
       </div>
 
-      {/* ✅ MODAL PARA VER EL COMPROBANTE */}
       {viewingImage && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setViewingImage(null)}>
           <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>

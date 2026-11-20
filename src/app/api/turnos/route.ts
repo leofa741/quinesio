@@ -52,10 +52,11 @@ export async function GET(req: NextRequest) {
       query.fechaInicio = { $gte: new Date(start), $lte: new Date(end) };
     }
 
-    const turnos = await Turno.find(query)
-      .populate('paciente', 'name lastName email')
-      .populate('profesional', 'name lastName email')
+  const turnos = await Turno.find(query)
+      .populate('paciente', 'name lastName email phone') // <-- AGREGADO phone
+      .populate('profesional', 'name lastName email phone') // <-- AGREGADO phone
       .sort({ fechaInicio: 1 });
+
 
     const turnoIds = turnos.map(t => t._id.toString());
     const actividades = await Actividad.find({
@@ -92,8 +93,12 @@ export async function GET(req: NextRequest) {
           dniDorsoUrl: turno.dniDorsoUrl || '',
           comprobantePagoUrl: turno.comprobantePagoUrl || '', // ✅ ¡ESTA ES LA LÍNEA QUE FALTABA!
           pacienteId: turno.paciente._id,
+          pacienteNombre: pacienteName,
+          pacienteTelefono: turno.paciente.phone || '',
           profesionalId: turno.profesional._id,
           profesionalNombre: profesionalName,
+          profesionalEmail: turno.profesional.email || '' ,
+          profesionalTelefono: turno.profesional.phone || '',
           tieneActividad: tieneActividad,
         }
       };
@@ -106,12 +111,15 @@ export async function GET(req: NextRequest) {
   }
 }
 
+
+
 // ✅ POST: Crear turno (Soporta FormData para imágenes)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !['admin', 'administrativos', 'profesionales', 'pacientes'].includes(session.user?.role || '')) {
-      return NextResponse.json({ message: 'No autorizado' }, { status: 401 });
+    // ✅ RESTRINGIDO: Solo 'admin' y 'administrativos' pueden crear turnos
+    if (!session || !['admin', 'administrativos'].includes(session.user?.role || '')) {
+      return NextResponse.json({ message: 'No autorizado. Solo administradores pueden crear turnos.' }, { status: 403 });
     }
 
     const contentType = req.headers.get('content-type') || '';
@@ -154,9 +162,7 @@ export async function POST(req: NextRequest) {
     const tiempoPrep = profesional.tiempoPreparacionMinutos || 0;
     const end = new Date(start.getTime() + (duracionMinutos + tiempoPrep) * 60000);
 
-    // ✅ MODIFICADO: Se eliminó la validación bloqueante de superposición.
-    // Ahora el sistema permite crear "sobreturnos" (múltiples pacientes a la misma hora 
-    // para el mismo profesional, o distintos profesionales a la misma hora).
+   
 
     const nuevoTurno = await Turno.create({
       paciente: pacienteId,

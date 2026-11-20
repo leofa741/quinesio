@@ -70,15 +70,14 @@ export async function POST(req: Request) {
     // Construir contenido del email
     const emailContent = buildEmailContent(body);
 
-    const mailOptions = {
-      from: `"Centro Kinesiológico" <${process.env.MAILER_EMAIL}>`,
-      to: process.env.MAILER_EMAIL,
+       const mailOptions = {
+      from: `"Centro Kinesiológico" <${process.env.MAILER_EMAIL}>`, // ✅ Sigue saliendo de tu cuenta configurada
+      to: process.env.MAILER_TO_EMAIL || process.env.MAILER_EMAIL,  // ✅ Llega al correo del admin (con fallback por seguridad)
       cc: process.env.MAILER_CC ? process.env.MAILER_CC.split(',').map((e: string) => e.trim()) : undefined,
       subject: `🏥 Nueva consulta: ${interestLabels[interest]} - ${name}`,
       html: emailContent,
       text: buildTextContent(body),
     };
-
     await transporter.sendMail(mailOptions);
 
     console.log(`✅ Email enviado: ${interest} - ${contact}`);
